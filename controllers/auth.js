@@ -18,7 +18,7 @@ export async function PostSignUp(req,res,next){
     res.status(200).json(newAdmin)
     } catch (error) {
         console.log(error);
-        res.status(401).send(error)
+        res.status(401).json(error)
     }
    
 }
@@ -32,8 +32,8 @@ export async function PostLogin(req,res,next){
             const ComparePass=await bcrypt.compare(password,OneAdmin.password)
             if (ComparePass===true){
             const token=jwt.sign({email:OneAdmin.email,AdminId:OneAdmin._id},"amirmamad",{expiresIn:"1h"})
-            res.status(200).send({
-                AdminId:OneAdmin._id,
+            res.status(200).json({
+                AdminId:OneAdmin._id.toString(),
                 token:token
             })
            }
