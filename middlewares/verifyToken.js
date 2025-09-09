@@ -15,6 +15,7 @@ export async function VerifyToken(req, res, next) {
       return next(error);
     }
     req.userId = Decoded.AdminId;
+    next()
   } catch (error) {
     error.status = 401;
     return next(error);
