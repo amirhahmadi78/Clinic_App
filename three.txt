@@ -2,3 +2,8 @@ git add .
 git commit -m "توضیح تغییرات"
 git pull origin main   # برای گرفتن آپدیت از ریموت
 git push origin main   # برای فرستادن تغییرات خودت
+
+
+
+
+git remote -v #واسه اینکه ببینیم تو چه ادرسی وش میشه
