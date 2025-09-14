@@ -31,5 +31,9 @@ const AdminSchema=new Schema({
     },
 
     
+}
+,
+{
+    timestamps:true
 })
 export default mongoose.model("admin",AdminSchema)

@@ -22,11 +22,16 @@ const PatientSchema=new Schema({
         required:true,
         unique:true
     },
-    role:{
-        type:String,
-        enum:["internalManager","admin","secretary"],
-        required:true
-    },
-
-    
+    therapists: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: "therapist"
+        }
+    ]
+}
+,
+{
+    timestamps:true
 })
+
+export default mongoose.model("patient",PatientSchema)

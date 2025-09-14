@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use((error, req, res, next) => {
-  console.error(error); // برای لاگ کردن خطا در سرور
+  console.error(error); 
   const status = error.statusCode || 500;
   const message = error.message;
   res.status(status).json({ message: message });

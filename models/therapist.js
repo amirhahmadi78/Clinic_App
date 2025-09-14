@@ -10,6 +10,11 @@ const TherapistSchema=new Schema({
         required:true,
         unique:true
     },
+    password:{
+          type:String,
+        required:true,
+        unique:true
+    },
     name:{
         type:String,
         required:true
@@ -31,17 +36,21 @@ const TherapistSchema=new Schema({
     },
     skills: {
   type: [String],
-  enum: ['Mental', 'physical', 'SI-PM','SLP','Edocation','Psychologist']
+  enum: ['Mental', 'physical', 'SI-PM','SLP','Edocation','Psychologist',"LD"]
 },
 availableHours: [
     { day: String, startTime: String, endTime: String }],
-    patients:[{
-        patientId:ObjectId,
-        ref:"patient"
-    }]
+ patients: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "patient"
+    }
+  ]
 
     
 },
 {
     timestamps:true
 })
+
+export default mongoose.model("therapist" , TherapistSchema)
