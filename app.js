@@ -1,6 +1,8 @@
 import express from "express";
 import mongoose from "mongoose";
-import auth from "./routes/auth.js";
+import authRoute from "./routes/auth.js";
+import therapistRoute from "./routes/therapist.js"
+import adminRoute from './routes/admin.js';
 
 const app = express();
 const PORT = process.env.PORT || 8642;
@@ -24,7 +26,9 @@ app.use((error, req, res, next) => {
 });
 
 
-app.use(auth);
+app.use(authRoute);
+app.use(therapistRoute)
+app.use(adminRoute)
 
 const connectDB = async () => {
   try {

@@ -1,9 +1,8 @@
 git add .
-git commit -m "Good Changing I can Standing"
-git pull origin main   # برای گرفتن آپدیت از ریموت
+git commit -m "Complete auth"
 git push origin main   # برای فرستادن تغییرات خودت
 
 
-
+git pull origin main   # برای گرفتن آپدیت از ریموت
 
 git remote -v #واسه اینکه ببینیم تو چه ادرسی وش میشه

@@ -8,6 +8,10 @@ const PatientSchema=new Schema({
         required:true,
         unique:true
     },
+    password:{
+        type:String,
+        required:true
+    },
     name:{
         type:String,
         required:true
@@ -31,7 +35,14 @@ const PatientSchema=new Schema({
 }
 ,
 {
-    timestamps:true
+    timestamps:true,
+     toJSON: {
+    transform(doc, ret) {
+      delete ret.password;
+      return ret;
+    }
+  }
+    
 })
 
 export default mongoose.model("patient",PatientSchema)

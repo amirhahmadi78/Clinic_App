@@ -21,19 +21,26 @@ const AdminSchema=new Schema({
         unique:true
     },
     phone:{
-        type:Number,
+        type:String,
         required:true,
         unique:true
     },
     role:{
         type:String,
         enum:["internalManager","admin","secretary"],
+        required:true
     },
 
     
 }
 ,
 {
-    timestamps:true
+    timestamps:true,
+     toJSON: {
+    transform(doc, ret) {
+      delete ret.password;
+      return ret;
+    }
+  }
 })
 export default mongoose.model("admin",AdminSchema)

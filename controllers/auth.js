@@ -17,7 +17,7 @@ export async function AdminSignUp(req, res, next) {
       return next(error);
     }
 
-    const { username, name, phone, email, password } = req.body;
+    const { username, name, phone, email, password, role } = req.body;
     const hashedPassword = await bcrypt.hash(password, 12);
     const newAdmin = new admin({
       username,
@@ -25,6 +25,7 @@ export async function AdminSignUp(req, res, next) {
       name,
       email,
       phone,
+      role
     });
     await newAdmin.save();
     res.status(200).json({
