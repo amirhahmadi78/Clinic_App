@@ -1,5 +1,6 @@
 import Appointment from "../models/Appointment.js";
 import { DateTime } from "luxon";
+import { ConflictRole } from "../util/ConflictRule.js";
 
 export async function AddAppointment(req, res, next) {
   try {
@@ -20,6 +21,18 @@ export async function AddAppointment(req, res, next) {
     const localDay = startDT.toFormat("yyyy-MM-dd");
     const createdBy=req.userId ||"68c6b48915700380ed73141d"
     
+    const TherapistAppointments=await Appointment.find({therapistId},"start end")
+
+    for (let OneAppointment of TherapistAppointments) {
+      const otherStart = OneAppointment.start
+      const otherEnd = OneAppointment.end
+      ConflictRole(startDT, endDT, otherStart, otherEnd);
+    }
+   
+    
+    
+
+
     const MakeAppointment = new Appointment({
       therapistId,
       patientId,
