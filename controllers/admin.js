@@ -1,7 +1,9 @@
 // import admin from "../models/admin.js";
 import admin from "../models/admin.js";
+import appointment from "../models/Appointment.js";
 import patient from "../models/patient.js";
 import therapist from "../models/therapist.js";
+
 
 export async function findTherapists(req, res, next) {
   try {
@@ -54,5 +56,32 @@ export async function AddPatientToTherapist(req, res, next) {
   } catch (error) {
    
     next(error);
+  }
+}
+
+export async function DailyScheduleOfTherapist(req , res , next){
+  try {
+    const { therapistId, date } = req.query;
+
+    if (!therapistId || !date) {
+      const error = new Error("مشخصات درمانگر و تاریخ الزامی هستند");
+      error.statusCode = 400;
+      return next(error);
+    }
+    const dt = DateTime.fromISO(date, { zone: "Asia/Tehran" });
+    const localDay = dt.toFormat("yyyy-MM-dd");
+
+    const appointments = await appointment.find({
+      therapistId,
+      localDay,
+    });
+    if (appointments.length==0){
+      const error = new Error("برنامه ی درمانگر در این تاریخ خالی می باشد");
+      error.statusCode = 404;
+      return next(error);
+    }
+    res.status(200).json({ appointments });
+  } catch (err) {
+    next(err);
   }
 }

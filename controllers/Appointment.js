@@ -55,3 +55,78 @@ export async function AddAppointment(req, res, next) {
     next(error);
   }
 }
+
+export async function deleteAppointment(req, res, next) {
+  try {
+    const {
+      appointmentId
+      
+    } = req.body;
+  const deletedAppointment=await Appointment.findByIdAndDelete(appointmentId)
+  if (!deletedAppointment){
+     const error = new Error("برنامه ی مورد نظر وجود ندارد");
+      error.statusCode = 404;
+      return next(error);
+  }
+  res.status(200).json({
+    message:"برنامه ی مورد نظر با موفقیت حذف شد",
+    deletedAppointment
+
+  })
+    
+  } catch (error) {
+    error = new Error("برنامه ی مورد نظر وجود ندارد");
+      error.statusCode = 404;
+      
+    next(error);
+  }
+}
+
+export async function DailyScheduleOfTherapist(req , res , next){
+  try {
+    let { therapistId, date } = req.query;
+
+    if (!therapistId || !date) {
+      const error = new Error("مشخصات درمانگر و تاریخ الزامی هستند");
+      error.statusCode = 400;
+      return next(error);
+    }
+    date=date.trim()
+    const dt = DateTime.fromISO(date, { zone: "Asia/Tehran" });
+    const localDay = dt.toFormat("yyyy-MM-dd");
+    
+    
+    const appointments = await Appointment.find({
+      therapistId,
+      localDay,
+    });
+    if (appointments.length==0){
+      const error = new Error("برنامه ی درمانگر در این تاریخ خالی می باشد");
+      error.statusCode = 404;
+      return next(error);
+    }
+    res.status(200).json({ appointments });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function DailyScheduleOfPatient(req , res , next){
+  try {
+    let {patientId,date}=req.query
+     date=date.trim()
+    const dt = DateTime.fromISO(date, { zone: "Asia/Tehran" });
+    const localDay = dt.toFormat("yyyy-MM-dd");
+    const appointments=await Appointment.find({patientId,localDay})
+    if(appointments.length==0){
+       const error = new Error("برنامه ی مراجع در این تاریخ خالی می باشد");
+      error.statusCode = 404;
+      return next(error);
+    }
+    res.status(200).json({
+      appointments
+    })
+  } catch (error) {
+    next(error)
+  }
+}
