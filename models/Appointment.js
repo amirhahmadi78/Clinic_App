@@ -19,6 +19,10 @@ const appointmentSchema = new Schema(
       enum: ["session", "assessment", "break", "blocked"],
       default: "session",
     },
+    patientFee:{
+      type:Number
+      ,required:true
+    },
     status: {
       type: String,
       enum: ["scheduled", "completed", "canceled", "no-show"],

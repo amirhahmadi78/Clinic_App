@@ -35,7 +35,7 @@ router.post(
   "/login/patient",
   body("username").isLength({ min: 5 }),
   body("password").isLength({ min: 5 }),
-  AdminLogin
+  PatientLogin
 );
 
 

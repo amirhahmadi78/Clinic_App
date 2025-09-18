@@ -111,7 +111,7 @@ export async function PatientSignUp(req, res, next) {
       error.data = errors.array();
       throw error;
     }
-    const { username, name, phone, email, password } = req.body;
+    const { username, name, phone, email, password,introducedBy } = req.body;
     
  const existUser = await patient.findOne({
       $or: [{ username }, { email },{phone}],
@@ -125,6 +125,8 @@ export async function PatientSignUp(req, res, next) {
         message = "ایمیل قبلاً ثبت شده است!";
       } else if (existUser.phone===phone) {
         message = "شماره تلفن قبلاً ثبت شده است!"
+      }else{
+        message="ورودی ها نا معتبر هستند"
       }
 
       const error = new Error(message);
@@ -141,6 +143,7 @@ export async function PatientSignUp(req, res, next) {
       name,
       email,
       phone,
+      introducedBy
     });
     await newPatient.save();
     res.status(200).json({
@@ -169,10 +172,16 @@ export async function PatientLogin(req, res, next) {
     const { username, password } = req.body;
 
     const OnePatient = await patient.findOne({ username });
-    if (OnePatient) {
-      const ComparePass = await bcrypt.compare(password, OnePatient.password);
+
+    if (!OnePatient) {
+       const error = new Error("نام کاربری نامعتبر است.");
+        error.statusCode = 401;
+        return next(error);
+    }
+
+      const ComparePass = bcrypt.compare(password, OnePatient.password);
       if (!ComparePass) {
-        const error = new Error("نام کاربری یا رمز عبور نامعتبر است.");
+        const error = new Error("رمز عبور نامعتبر است.");
         error.statusCode = 401;
         return next(error);
       }
@@ -185,11 +194,7 @@ export async function PatientLogin(req, res, next) {
         AdminId: OnePatient._id.toString(),
         token: token,
       });
-    } else {
-      const error = new Error("نام کاربری یا رمز عبور نامعتبر است.");
-      error.statusCode = 401;
-      return next(error);
-    }
+    
   } catch (error) {
     error.message = "your entered data is invalid";
     error.statusCode = 401;

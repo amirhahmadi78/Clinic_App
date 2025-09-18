@@ -1,6 +1,9 @@
 import Appointment from "../models/Appointment.js";
 import { DateTime } from "luxon";
 import { ConflictRole } from "../util/ConflictRule.js";
+import therapist from "../models/therapist.js";
+import patient from "../models/patient.js";
+import financial from "../models/financial.js";
 
 export async function AddAppointment(req, res, next) {
   try {
@@ -13,6 +16,7 @@ export async function AddAppointment(req, res, next) {
       status,
       room,
       notes,
+      patientFee
       
     } = req.body;
   
@@ -20,6 +24,19 @@ export async function AddAppointment(req, res, next) {
     const endDT = startDT.plus({ minutes: duration });
     const localDay = startDT.toFormat("yyyy-MM-dd");
     const createdBy=req.userId ||"68c6b48915700380ed73141d"
+    const TherapistExist=await therapist.findById(therapistId)
+    if(!TherapistExist){
+      const error = new Error("درمانگر مورد نظر وجود ندارد");
+      error.statusCode = 404;
+      return next(error);
+    }
+
+      const PatientExist=await patient.findById(patientId)
+    if(!PatientExist){
+      const error = new Error("مراجع مورد نظر وجود ندارد");
+      error.statusCode = 404;
+      return next(error);
+    }
     
     const TherapistAppointments=await Appointment.find({therapistId},"start end")
 
@@ -45,6 +62,7 @@ export async function AddAppointment(req, res, next) {
       notes,
       createdBy,
       localDay,
+      patientFee
     });
 
     const newAppointment = await MakeAppointment.save();
@@ -62,14 +80,19 @@ export async function deleteAppointment(req, res, next) {
       appointmentId
       
     } = req.body;
+    let FinancialOperations="ویزیت حذف شده فاقد عملیات مالی بود"
   const deletedAppointment=await Appointment.findByIdAndDelete(appointmentId)
+  const deleteFinancial=await financial.findOneAndDelete({appointmentId:appointmentId})
+  if(deleteFinancial){
+    FinancialOperations="عملیات مالی مورد نظر حذف گردید"
+  }
   if (!deletedAppointment){
-     const error = new Error("برنامه ی مورد نظر وجود ندارد");
+     const error = new Error("ویزیت مورد نظر وجود ندارد");
       error.statusCode = 404;
       return next(error);
   }
   res.status(200).json({
-    message:"برنامه ی مورد نظر با موفقیت حذف شد",
+    message:" ویزیت مورد نظر با موفقیت حذف شد و"+FinancialOperations,
     deletedAppointment
 
   })

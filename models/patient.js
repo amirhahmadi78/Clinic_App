@@ -31,7 +31,8 @@ const PatientSchema=new Schema({
           type: Schema.Types.ObjectId,
           ref: "therapist"
         }
-    ]
+    ],
+    introducedBy: { type: mongoose.Schema.Types.ObjectId, ref: "therapist" }
 }
 ,
 {
