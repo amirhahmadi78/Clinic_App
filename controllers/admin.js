@@ -1,9 +1,10 @@
 // import admin from "../models/admin.js";
 import admin from "../models/admin.js";
 import appointment from "../models/Appointment.js";
+import financial from "../models/financial.js";
 import patient from "../models/patient.js";
 import therapist from "../models/therapist.js";
-
+import { addFinancial } from "../services/financialservice.js";
 
 export async function findTherapists(req, res, next) {
   try {
@@ -30,12 +31,10 @@ export async function AddPatientToTherapist(req, res, next) {
   try {
     const { patientId, therapistId } = req.body;
 
-   
-
     const OneTherapist = await therapist.findById(therapistId);
     const OnePatient = await patient.findById(patientId);
     if (!OneTherapist || !OnePatient) {
-    const error = new Error("درمانگر یا مراجع پیدا نشد");
+      const error = new Error("درمانگر یا مراجع پیدا نشد");
       error.statusCode = 404;
       return next(error);
     }
@@ -54,12 +53,11 @@ export async function AddPatientToTherapist(req, res, next) {
       therapist: OneTherapist,
     });
   } catch (error) {
-   
     next(error);
   }
 }
 
-export async function DailyScheduleOfTherapist(req , res , next){
+export async function DailyScheduleOfTherapist(req, res, next) {
   try {
     const { therapistId, date } = req.query;
 
@@ -75,7 +73,7 @@ export async function DailyScheduleOfTherapist(req , res , next){
       therapistId,
       localDay,
     });
-    if (appointments.length==0){
+    if (appointments.length == 0) {
       const error = new Error("برنامه ی درمانگر در این تاریخ خالی می باشد");
       error.statusCode = 404;
       return next(error);
@@ -83,5 +81,68 @@ export async function DailyScheduleOfTherapist(req , res , next){
     res.status(200).json({ appointments });
   } catch (err) {
     next(err);
+  }
+}
+
+export async function adminChangeStatusAndMakefinance(req, res, next) {
+  try {
+    const userId = req.userId || "68cbcac51a2aa06e0e151dd4"; //felan;
+    const { appointmentId, status_clinic } = req.body;
+    if (!status_clinic || !appointmentId) {
+      const error = new Error("مقادیر وارد شده نادرست است");
+      error.statusCode = 404;
+      return next(error);
+    }
+    const OneAppointment = await appointment.findById(appointmentId);
+    if (!OneAppointment) {
+      const error = new Error("ویزیت مورد نظر پیدا نشد");
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    OneAppointment.status_clinic = status_clinic;
+
+    if (
+      (status_clinic === "completed-notpaid" ||
+        status_clinic === "completed-paid" ||
+        status_clinic === "bimeh") &&
+      OneAppointment.status_therapist === "completed"
+    ) {
+      const isFinancial = await financial.findOne({
+        appointmentId: appointmentId,
+      });
+      if (isFinancial) {
+        const error = new Error(
+          "امور مالی مربوط به ویزیت مورد نظر ثبت شده می باشد"
+        );
+        error.statusCode = 404;
+        return next(error);
+      } else {
+        const [resultFinancial, updatedAppointment] = await Promise.all([
+          addFinancial(appointmentId, userId),
+          OneAppointment.save(),
+        ]);
+
+         res.status(201).json({
+          message:"وضعیت ویزیت تغییر و تراکنش مالی ثبت گردید",
+          resultFinancial,
+          updatedAppointment
+        })
+      }
+    } else {
+      const updateAppointment = await OneAppointment.save();
+      res.status(201).json({
+        message: "وضعیت ویزیت بروز رسانی شد",
+        updateAppointment,
+      });
+      console.log("just Updated: ", updateAppointment);
+      if (!updateAppointment) {
+        const error = new Error("بروز رسانی وضعیت ویزیت انجام نشد");
+        error.statusCode = 402;
+        return next(error);
+      }
+    }
+  } catch (error) {
+    next(error);
   }
 }

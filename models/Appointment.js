@@ -23,17 +23,25 @@ const appointmentSchema = new Schema(
       type:Number
       ,required:true
     },
-    status: {
+    status_clinic: {
       type: String,
-      enum: ["scheduled", "completed", "canceled", "no-show"],
+      enum: ["scheduled","completed-notpaid", "completed-paid", "canceled", "bimeh"],
       default: "scheduled",
     },
+    status_therapist:{
+      type:String,
+        enum: ["scheduled","completed", "absent"],
+      default: "scheduled"
+    }
+    ,
     room: { type: String },
     notes: { type: String },
-    createdBy: { type: Schema.Types.ObjectId, ref: "admin" },
+    createdBy: { type: Schema.Types.ObjectId, ref: "admin" },//felan
     localDay: { type: String, index: true },
   },
   { timestamps: true }
 );
+
+
 
 export default mongoose.model("appointment",appointmentSchema)
