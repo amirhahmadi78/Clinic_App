@@ -1,8 +1,9 @@
 // import patient from "../models/patient.js";
+import { DateTime } from "luxon";
 import Appointment from "../models/Appointment.js";
 import financial from "../models/financial.js";
 import therapist from "../models/therapist.js";
-import { addFinancial } from "../services/financialservice.js";
+import { addFinancial,dailyFinancialOfTherapist,monthFinancialOfTherapist } from "../services/financialservice.js";
 
 export async function ShowPatients(req, res, next) {
   try {
@@ -77,7 +78,7 @@ export async function therapistChangeStatusAndMakefinance(req, res, next) {
         message: "وضعیت ویزیت بروز رسانی شد",
         updateAppointment,
       });
-      console.log("just Updated: ", updateAppointment);
+    
       if (!updateAppointment) {
         const error = new Error("بروز رسانی وضعیت ویزیت انجام نشد");
         error.statusCode = 402;
@@ -86,5 +87,41 @@ export async function therapistChangeStatusAndMakefinance(req, res, next) {
     }
   } catch (error) {
     next(error);
+  }
+}
+
+export async function GetdailyTherapistIncome(req,res,next){
+  try {
+    const{localDay}=req.query
+    const therapistId=req.userId||"68cbcb0a1a2aa06e0e151dd8" //felan
+    if (!localDay||!therapistId){
+      const error = new Error("تاریخ یا تراپیست انتخاب نشده است");
+      error.statusCode = 400;
+      return next(error);
+    }
+    const response=await dailyFinancialOfTherapist(therapistId,localDay)
+    res.status(200).json({
+      response
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function GetmonthTherapistIncome(req,res,next){
+  try {
+    const{therapistId,startDay,endDay}=req.query
+    
+    if (!endDay||!startDay||!therapistId){
+      const error = new Error("تاریخ یا تراپیست انتخاب نشده است");
+      error.statusCode = 400;
+      return next(error);
+    }
+    const response=await monthFinancialOfTherapist(therapistId,startDay,endDay)
+    res.status(200).json({
+      response
+    })
+  } catch (error) {
+    next(error)
   }
 }

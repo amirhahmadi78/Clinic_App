@@ -16,7 +16,8 @@ const financialSchema = new Schema({
   patientId: { type: Schema.Types.ObjectId, ref: "patient", required: true },
    patientFee: { type: Number, required: true },        
   clinicShare: { type: Number, required: true },      
-  therapistShare: { type: Number, required: true },   
+  therapistShare: { type: Number, required: true },  
+ 
   
   status: { 
     type: String

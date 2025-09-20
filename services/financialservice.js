@@ -13,7 +13,7 @@ import financial from "../models/financial.js";
       error.statusCode = 404;
       throw error;
     }
-    const { therapistId, patientId, patientFee } = OneAppointment;
+    const { therapistId, patientId, patientFee  } = OneAppointment;
     
     
     const OneTherapist = await therapist.findById(therapistId);
@@ -55,4 +55,104 @@ import financial from "../models/financial.js";
   } catch (error) {
     throw error;
   }
+}
+
+
+
+export async function dailyFinancialOfTherapist(therapistId,localDay){
+  try {
+    localDay=localDay.trim()
+     let reports=[]
+  let therapistIncome=0
+  let clinicIncome=0
+  const appointments=await Appointment.find({therapistId,localDay})
+  if (appointments.length===0){
+    const error=new Error("درمانگر در روز مورد نظر ویزیت  ندارد")
+    error.statusCode=404
+    throw error
+  }
+for (const OneAppoint of appointments){
+  const Onereport=await financial.findOne({appointmentId:OneAppoint._id}) .populate([
+    { path: "patientId", select: "name" },
+    { path: "appointmentId", select: "duration status_clinic status_therapist" }
+  ])
+  .select({"appointmentId":1,"patientFee":1,"therapistShare":1,"clinicShare":1});
+  if (Onereport){
+    therapistIncome+=Onereport.therapistShare
+    clinicIncome+=Onereport.clinicShare
+    reports.push(Onereport)
+  }
+}
+ if (reports.length===0){
+    const error=new Error("درمانگر در روز مورد نظر ویزیت ثبت شده نداشته است")
+    error.statusCode=404
+    throw error
+  }
+  return ({
+    message:"تراکنش های مالی درمانگر در روز مورد نظر به شرح زیر است",
+    reports,
+    therapistIncome,
+    clinicIncome
+  })
+  } catch (error) {
+    throw error;
+    
+  }
+ 
+}
+
+
+export async function monthFinancialOfTherapist(therapistId,startDay,endDay){
+  try {
+    startDay=startDay.trim()
+    endDay=endDay.trim()
+   if (!therapistId || !startDay || !endDay) {
+  const error = new Error("تاریخ شروع، پایان یا درمانگر انتخاب نشده است");
+  error.statusCode = 400;
+  throw error;
+}
+
+     let reports=[]
+  let therapistIncome=0
+  let clinicIncome=0
+  const appointments = await Appointment.find({
+      therapistId,
+      localDay: {
+        $gte: startDay,
+        $lte: endDay
+      }
+    });
+  if (appointments.length===0){
+    const error=new Error("درمانگر در بازه مورد نظر ویزیت  ندارد")
+    error.statusCode=404
+    throw error
+  }
+for (const OneAppoint of appointments){
+  const Onereport=await financial.findOne({appointmentId:OneAppoint._id}) .populate([
+    { path: "patientId", select: "name" },
+    { path: "appointmentId", select: "duration status_clinic status_therapist localDay" }
+  ])
+  .select({"appointmentId":1,"patientFee":1,"therapistShare":1,"clinicShare":1});
+  if (Onereport){
+    therapistIncome+=Onereport.therapistShare
+    clinicIncome+=Onereport.clinicShare
+    reports.push(Onereport)
+  }
+}
+ if (reports.length===0){
+    const error=new Error("درمانگر در بازه مورد نظر ویزیت ثبت شده نداشته است")
+    error.statusCode=404
+    throw error
+  }
+  return ({
+    message:"تراکنش های مالی درمانگر در بازه مورد نظر به شرح زیر است",
+    reports,
+    therapistIncome,
+    clinicIncome
+  })
+  } catch (error) {
+    throw error;
+    
+  }
+ 
 }
