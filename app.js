@@ -5,6 +5,7 @@ import therapistRoute from "./routes/therapist.js"
 import adminRoute from './routes/admin.js';
 import appointmentRoute from './routes/Appointment.js'
 import financialRoute from "./routes/financial.js";
+import patientRoute from "./routes/patient.js"
 const app = express();
 const PORT = process.env.PORT || 8642;
 const DB_URI = "mongodb://localhost:27017/clinic_app";
@@ -32,6 +33,7 @@ app.use(therapistRoute)
 app.use(adminRoute)
 app.use(appointmentRoute)
 app.use(financialRoute)
+app.use(patientRoute)
 
 const connectDB = async () => {
   try {
