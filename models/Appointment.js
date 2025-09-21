@@ -38,6 +38,7 @@ const appointmentSchema = new Schema(
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: "admin" },//felan
     localDay: { type: String, index: true },
+    report:{type: String }
   },
   { timestamps: true }
 );

@@ -81,7 +81,7 @@ export async function AdminLogin(req, res, next) {
         return next(error);
       }
       const token = jwt.sign(
-        { email: OneAdmin.email, AdminId: OneAdmin._id },
+        { email: OneAdmin.email, AdminId: OneAdmin._id ,role: OneAdmin.role},
         "amirmamad",
         { expiresIn: "1h" }
       );
@@ -186,7 +186,7 @@ export async function PatientLogin(req, res, next) {
         return next(error);
       }
       const token = jwt.sign(
-        { email: OnePatient.email, AdminId: OnePatient._id },
+        { email: OnePatient.email, AdminId: OnePatient._id ,role: OnePatient.role},
         "amirmamad",
         { expiresIn: "1h" }
       );
@@ -292,7 +292,7 @@ export async function TherapistLogin(req, res, next) {
         return next(error);
       }
       const token = jwt.sign(
-        { email: OneTherapist.email, AdminId: OneTherapist._id },
+        { email: OneTherapist.email, AdminId: OneTherapist._id ,role: OneTherapist.role },
         "amirmamad",
         { expiresIn: "1h" }
       );
