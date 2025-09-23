@@ -17,8 +17,8 @@ const financialSchema = new Schema({
    patientFee: { type: Number, required: true },        
   clinicShare: { type: Number, required: true },      
   therapistShare: { type: Number, required: true },  
- 
-  
+  localDay_visit:{type:String , required:true},
+  payment:{type:String,required:true},
   status: { 
     type: String
   },

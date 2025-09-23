@@ -62,12 +62,13 @@ export async function therapistChangeStatusAndMakefinance(req, res, next) {
         error.statusCode = 404;
         return next(error);
       } else {
+        const payment=OneAppointment.status_clinic
         const [resultFinancial, updatedAppointment] = await Promise.all([
-          addFinancial(appointmentId, userId),
+          addFinancial(appointmentId, userId,payment),
           OneAppointment.save(),
         ]);
 
-        res.status(201),json({
+        res.status(201).json({
           message:"وضعیت ویزیت تغییر و تراکنش مالی ثبت گردید",
           resultFinancial,
           updatedAppointment
@@ -161,19 +162,19 @@ export async function writeReport(req,res,next){
 
 export async function postDailyLeaveRequest(req,res,next){
   try {
-     const{userId,startDate,endDate,text}=req.body
+     const{userId,startDay,endDay,text}=req.body
         // if (userId!==req.user.id){
         //     const error=new Error("خطای دسترسی! در خواست مرخصی با با مشخصات یوزر مطابقت ندارد")
         //     error.statusCode=403
         //     return next(error) 
         // } felan
-        if(!userId||!startDate,!endDate,!text){
+        if(!userId||!startDay||!endDay||!text){
             const error=new Error("لطفا مقادیر ورودی را وارد نمایید")
             error.statusCode=400
             return next(error) 
         }
         const userType="therapist" //felan req.user.role
-        const LeaveRequestReport=await serviceDailyLeaveRequest(userId,startDate,endDate,text,userType)
+        const LeaveRequestReport=await serviceDailyLeaveRequest(userId,startDay,endDay,text,userType)
         res.status(201).json(LeaveRequestReport)
   } catch (error) {
     next(error)

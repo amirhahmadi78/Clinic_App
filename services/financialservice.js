@@ -3,17 +3,17 @@ import therapist from "../models/therapist.js";
 import patient from "../models/patient.js";
 import financial from "../models/financial.js";
  
- export async function addFinancial(appointmentId,userId ) {
+ export async function addFinancial(appointmentId,userId,payment ) {
     
  try {
-    
+   
     const OneAppointment = await Appointment.findById(appointmentId);
     if (!OneAppointment) {
       const error = new Error("ویزیت مورد نظر یافت نشد");
       error.statusCode = 404;
       throw error;
     }
-    const { therapistId, patientId, patientFee  } = OneAppointment;
+    const { therapistId, patientId, patientFee,localDay  } = OneAppointment;
     
     
     const OneTherapist = await therapist.findById(therapistId);
@@ -45,6 +45,8 @@ import financial from "../models/financial.js";
       patientFee,
       clinicShare,
       therapistShare,
+      payment,
+      localDay_visit:localDay,
       userId: userId || "68cbcac51a2aa06e0e151dd4", // fellan
     });
 
@@ -112,7 +114,7 @@ export async function monthFinancialOfTherapist(therapistId,startDay,endDay){
   throw error;
 }
 
-     let reports=[]
+  let TotalFinancial=0   
   let therapistIncome=0
   let clinicIncome=0
   const appointments = await Appointment.find({
@@ -127,28 +129,37 @@ export async function monthFinancialOfTherapist(therapistId,startDay,endDay){
     error.statusCode=404
     throw error
   }
-for (const OneAppoint of appointments){
-  const Onereport=await financial.findOne({appointmentId:OneAppoint._id}) .populate([
+
+  const reports=await financial.find({therapistId,localDay_visit:{
+     $gte: startDay,
+        $lte: endDay
+  }}) .populate([
     { path: "patientId", select: "name" },
     { path: "appointmentId", select: "duration status_clinic status_therapist localDay" }
   ])
   .select({"appointmentId":1,"patientFee":1,"therapistShare":1,"clinicShare":1});
-  if (Onereport){
-    therapistIncome+=Onereport.therapistShare
-    clinicIncome+=Onereport.clinicShare
-    reports.push(Onereport)
-  }
-}
- if (reports.length===0){
+
+  if (reports.length===0){
     const error=new Error("درمانگر در بازه مورد نظر ویزیت ثبت شده نداشته است")
     error.statusCode=404
     throw error
+  }else{
+    for (const Onereport of reports){
+    therapistIncome+=Onereport.therapistShare
+    clinicIncome+=Onereport.clinicShare
+    TotalFinancial+=Onereport.patientFee
+    }
+ 
+   
   }
+ 
   return ({
     message:"تراکنش های مالی درمانگر در بازه مورد نظر به شرح زیر است",
-    reports,
     therapistIncome,
-    clinicIncome
+    clinicIncome,
+    TotalFinancial,
+    reports,
+    
   })
   } catch (error) {
     throw error;
@@ -156,3 +167,29 @@ for (const OneAppoint of appointments){
   }
  
 }
+
+
+export async function FindAllFinancial(query){
+  let AllFinancial=[]
+  let TotalFinancial=0
+  let TotalClinic=0
+  let TotalTherapist=0
+  const financials=await financial.find(query)
+    if (financials.length===0){
+    const error=new Error("تراکنش مالی  در بازه مورد نظر وجود  ندارد")
+    error.statusCode=404
+    throw error
+  }
+  for (const OneFinancial of financials){
+    AllFinancial.push(OneFinancial)
+    TotalFinancial+=OneFinancial.patientFee
+    TotalClinic+=OneFinancial.clinicShare
+    TotalTherapist+=OneFinancial.therapistShare
+  }
+  return{
+    AllFinancial,
+    TotalFinancial,
+    TotalClinic,
+    TotalTherapist
+  }
+  }

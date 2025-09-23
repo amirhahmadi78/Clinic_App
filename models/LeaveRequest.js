@@ -12,9 +12,12 @@ const LeaveRequestSchema = new Schema({
     required: true,
     enum: ["therapist", "admin"], 
   },
-  startDate: { type: String , required:true},
+
+  startDay:{ type: String },
+  endDay:{ type: String },
+  startDate: { type: String},
  
-  endDate: { type: String , required:true },
+  endDate: { type: String },
   localDay:{type: String},
   text: { type: String },
   status: {
