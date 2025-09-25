@@ -193,3 +193,52 @@ export async function FindAllFinancial(query){
     TotalTherapist
   }
   }
+
+export async function FindPatientFinance(query){
+  try {
+    let TotalFinancial=0
+    let TotalNotComplete=0
+    let TotalComplete=0
+    let Totalbimeh=0
+    let TotalClinicShare=0
+    let TotalTherapistShare=0
+
+    const financialList=await financial.find(query).populate({path:["appointmentId","therapistId"],
+    select:["name","status_clinic","status_therapist"]
+  })
+  if (financialList.length===0){
+    const error=new Error("تراکنشی با فیلتر های شما یافت نشد!")
+    error.statusCode=404
+    throw error
+  }
+  for(const Onefinancial of financialList){
+    TotalFinancial+=Onefinancial.patientFee
+    TotalClinicShare +=Onefinancial.clinicShare
+    TotalTherapistShare+=Onefinancial.therapistShare
+    if (Onefinancial.appointmentId.status_clinic==="completed-notpaid"){
+      TotalNotComplete +=Onefinancial.patientFee
+    }
+    if (Onefinancial.appointmentId.status_clinic==="completed-paid"){
+      TotalComplete +=Onefinancial.patientFee
+    }
+     if (Onefinancial.appointmentId.status_clinic==="bimeh"){
+      Totalbimeh +=Onefinancial.patientFee
+    }
+  }
+  return {
+    message:"داده های مورد نظر شما",
+    TotalFinancial,
+    TotalComplete,
+    TotalNotComplete,
+    TotalTherapistShare,
+    TotalClinicShare,
+    Totalbimeh,
+    TotalApointment:financialList.length,
+    
+    financialList
+  }
+  } catch (error) {
+    throw error
+  }
+  
+}

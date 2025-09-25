@@ -1,6 +1,6 @@
 import express from "express";
 // import { isAdminOrInternalManager } from "../middlewares/CheckRole.js"; بعدا بزارم توی افزودن مراجع به درمانگر felan
-import { findTherapists,AddPatientToTherapist,adminChangeStatusAndMakefinance,GetAllFinancial, GetFindLeaveRequests,GetmonthTherapistIncome} from "../controllers/admin.js";
+import { findTherapists,AddPatientToTherapist,adminChangeStatusAndMakefinance,GetAllFinancial, GetFindLeaveRequests,GetmonthTherapistIncome, GetPatientFinance} from "../controllers/admin.js";
 // import { body } from "express-validator";
 const router = express.Router();
 
@@ -15,4 +15,6 @@ router.get("/admin/leaverequests",GetFindLeaveRequests)
 router.get("/admin/GetAllfinancial",GetAllFinancial)
 
 router.get("/admin/therapistfinance",GetmonthTherapistIncome)
+
+router.get("/admin/patientfinance",GetPatientFinance)
 export default router
