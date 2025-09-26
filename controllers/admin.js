@@ -1,4 +1,5 @@
 // import admin from "../models/admin.js";
+import e from "express";
 import admin from "../models/admin.js";
 import appointment from "../models/Appointment.js";
 import financial from "../models/financial.js";
@@ -12,6 +13,7 @@ import {
 } from "../services/financialservice.js";
 import { GetRequests } from "../services/leaveRequestService.js";
 import { FindTherapist } from "../services/therapistService.js";
+import { GetPatients ,PatientDetails} from "../services/patientServise.js";
 
 export async function findTherapists(req, res, next) {
   try {
@@ -259,5 +261,41 @@ export async function GetPatientFinance(req, res, next) {
     res.status(201).json(list)
   } catch (error) {
     next(error)
+  }
+}
+
+
+export async function GetPatientsList(req,res,next){
+  try {
+    const { name, phone  } = req.query;
+    let query = {};
+    if (name) {
+      query.name ={$regex: name, $options: "i" };
+    }
+
+    if (phone) {
+      query.phone = phone;
+    }
+    const patientList = await GetPatients(query);
+    res.status(200).json(patientList);
+    
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function GetPatientDetails(req,res,next){
+  try {
+    const { patientId } = req.params;
+    if(!patientId){
+      const error = new Error("لطفا مراجع مورد نظر را انتخاب کنید");
+      error.statusCode = 400;
+      return next(error);
+    }
+    const patientDetails = await PatientDetails(patientId);
+    const list=await FindPatientFinance({patientId:patientId})
+    res.status(200).json({patientDetails,list});
+  } catch (error) {
+    next(error);
   }
 }
