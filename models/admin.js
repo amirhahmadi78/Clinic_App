@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 const Schema=mongoose.Schema
 
 const AdminSchema=new Schema({
+    modeluser: { type: String, default: "admin" },
     username:{
         type:String,
         required:true,

@@ -7,6 +7,7 @@ const Schema = mongoose.Schema;
 
 const TherapistSchema = new Schema(
   {
+    modeluser: { type: String, default: "therapist" },
     username: {
       type: String,
       required: true,
