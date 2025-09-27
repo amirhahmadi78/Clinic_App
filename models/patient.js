@@ -12,7 +12,11 @@ const PatientSchema=new Schema({
         type:String,
         required:true
     },
-    name:{
+   firstName:{
+        type:String,
+        required:true
+    },
+    lastName:{
         type:String,
         required:true
     },

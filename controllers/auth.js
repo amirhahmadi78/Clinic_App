@@ -16,7 +16,7 @@ export async function AdminSignUp(req, res, next) {
       return next(error);
     }
 
-    const { username, name, phone, email, password, role } = req.body;
+    const { username, firstName,lastName, phone, email, password, role } = req.body;
 
     const existUser = await admin.findOne({
       $or: [{ username }, { email },{phone}],
@@ -41,7 +41,8 @@ export async function AdminSignUp(req, res, next) {
     const newAdmin = new admin({
       username,
       password: hashedPassword,
-      name,
+      firstName,
+      lastName,
       email,
       phone,
       role,
@@ -111,7 +112,7 @@ export async function PatientSignUp(req, res, next) {
       error.data = errors.array();
       throw error;
     }
-    const { username, name, phone, email, password,introducedBy } = req.body;
+    const { username, firstName,lastName, phone, email, password,introducedBy } = req.body;
     
  const existUser = await patient.findOne({
       $or: [{ username }, { email },{phone}],
@@ -140,7 +141,8 @@ export async function PatientSignUp(req, res, next) {
     const newPatient = new patient({
       username,
       password: hashedPassword,
-      name,
+      firstName,
+      lastName,
       email,
       phone,
       introducedBy
@@ -214,7 +216,8 @@ export async function TherapistSignUp(req, res, next) {
 
     const {
       username,
-      name,
+      firstName,
+      lastName,
       phone,
       email,
       password,
@@ -248,7 +251,8 @@ export async function TherapistSignUp(req, res, next) {
     const newTherapist = new therapist({
       username,
       password: hashedPassword,
-      name,
+      firstName,
+      lastName,
       email,
       phone,
       role,

@@ -17,7 +17,7 @@ import { GetPatients ,PatientDetails} from "../services/patientServise.js";
 
 export async function findTherapists(req, res, next) {
   try {
-    const { name, phone, percentDefault, role, skills } = req.query;
+    const { firstName,lastName, phone, percentDefault, role, skills } = req.query;
     let query = {};
     if (role) {
       query.role = role;
@@ -25,8 +25,11 @@ export async function findTherapists(req, res, next) {
     if (skills) {
       query.skills = { $in: skills };
     }
-    if (name) {
-      query.name = name;
+    if (firstName) {
+      query.firstName = firstName;
+    }
+    if (lastName) {
+      query.lastName = lastName;
     }
     if (phone) {
       query.phone = phone;
@@ -267,10 +270,14 @@ export async function GetPatientFinance(req, res, next) {
 
 export async function GetPatientsList(req,res,next){
   try {
-    const { name, phone  } = req.query;
+    const { firstName,lastName, phone  } = req.query;
     let query = {};
-    if (name) {
-      query.name ={$regex: name, $options: "i" };
+    if (firstName) {
+      query.firstName ={$regex: firstName, $options: "i" };
+    }
+
+    if (lastName) {
+      query.lastName ={$regex: lastName, $options: "i" };
     }
 
     if (phone) {

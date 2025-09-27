@@ -3,7 +3,7 @@ import patient from "../models/patient.js";
 
 export async function GetPatients(query){
   try {
-      const patientList=await patient.find(query).populate("therapists","name role")
+      const patientList=await patient.find(query).populate("therapists","firstName lastName role")
    if(patientList.length===0){
     const error=new Error("مراجع پیدا نشد")
     error.statusCode=404
@@ -23,14 +23,14 @@ export async function GetPatients(query){
 export async function PatientDetails(patientId){
 
   try {
-        const OnePatient=await patient.findById(patientId).populate("therapists","name role")
+        const OnePatient=await patient.findById(patientId).populate("therapists","firstName lastName role")
         if(!OnePatient){
           const error=new Error("مراجع پیدا نشد")
           error.statusCode=404
           throw error
         }
         let query={patientId}
-        const appointmentsOfPatient=await Appointment.find(query).populate("therapistId","name role");
+        const appointmentsOfPatient=await Appointment.find(query).populate("therapistId","firstName lastName role");
         return {
             message: "جزئیات مراجع با موفقیت دریافت شد",
           patientdetail:OnePatient,

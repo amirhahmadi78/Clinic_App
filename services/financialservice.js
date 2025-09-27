@@ -75,7 +75,7 @@ export async function dailyFinancialOfTherapist(therapistId,localDay){
   }
 for (const OneAppoint of appointments){
   const Onereport=await financial.findOne({appointmentId:OneAppoint._id}) .populate([
-    { path: "patientId", select: "name" },
+    { path: "patientId", select: "firstName lastName" },
     { path: "appointmentId", select: "duration status_clinic status_therapist" }
   ])
   .select({"appointmentId":1,"patientFee":1,"therapistShare":1,"clinicShare":1});
@@ -134,7 +134,7 @@ export async function monthFinancialOfTherapist(therapistId,startDay,endDay){
      $gte: startDay,
         $lte: endDay
   }}) .populate([
-    { path: "patientId", select: "name" },
+    { path: "patientId", select: "firstName lastName" },
     { path: "appointmentId", select: "duration status_clinic status_therapist localDay" }
   ])
   .select({"appointmentId":1,"patientFee":1,"therapistShare":1,"clinicShare":1});
@@ -204,7 +204,7 @@ export async function FindPatientFinance(query){
     let TotalTherapistShare=0
 
     const financialList=await financial.find(query).populate({path:["appointmentId","therapistId"],
-    select:["name","status_clinic","status_therapist"]
+    select:["firstName","lastName","status_clinic","status_therapist"]
   })
   if (financialList.length===0){
     const error=new Error("تراکنشی با فیلتر های شما یافت نشد!")

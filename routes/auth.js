@@ -7,7 +7,8 @@ router.post(
   "/signup/admin",
   body("email").isEmail(),
   body("password").isLength({ min: 5 }).isAlphanumeric(),
-  body("name").isLength({ min: 5 }).trim(),
+  body("firstName").isLength({ min: 3 }).trim(),
+  body("lastName").isLength({ min: 3 }).trim(),
   body("username").isLength({ min: 5 }).trim(),
   body("phone").isNumeric(),
   AdminSignUp
@@ -24,7 +25,8 @@ router.post(
 router.post("/signup/patient", 
   body("email").isEmail(),
   body("password").isLength({ min: 5 }).isAlphanumeric(),
-  body("name").isLength({ min: 5 }).trim(),
+  body("firstName").isLength({ min: 3 }).trim(),
+  body("lastName").isLength({ min: 3 }).trim(),
   body("username").isLength({ min: 5 }).trim(),
   body("phone").isNumeric(),
 PatientSignUp)
@@ -42,7 +44,8 @@ router.post(
 router.post("/signup/therapist",
    body("email").isEmail(),
   body("password").isLength({ min: 5 }).isAlphanumeric(),
-  body("name").isLength({ min: 5 }).trim(),
+  body("firstName").isLength({ min: 3 }).trim(),
+  body("lastName").isLength({ min: 3 }).trim(),
   body("username").isLength({ min: 5 }).trim(),
   body("phone").isNumeric(),
   TherapistSignUp

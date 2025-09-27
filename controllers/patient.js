@@ -42,7 +42,7 @@ export async function showTherapists(req,res,next){
             return next(error) 
     }
     
-    const thisPatient=await patient.findById(patientId).populate("therapists", "name role") 
+    const thisPatient=await patient.findById(patientId).populate("therapists", "firstName lastName role") 
      if(!thisPatient.therapists||thisPatient.therapists.length===0){
            const error=new Error("درمانگری در لیست شما وجود ندارد!")
             error.statusCode=403
