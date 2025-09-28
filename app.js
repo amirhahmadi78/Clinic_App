@@ -1,5 +1,8 @@
+
 import express from "express";
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+dotenv.config();
 import authRoute from "./routes/auth.js";
 import therapistRoute from "./routes/therapist.js"
 import adminRoute from './routes/admin.js';
@@ -7,6 +10,9 @@ import appointmentRoute from './routes/Appointment.js'
 import financialRoute from "./routes/financial.js";
 import patientRoute from "./routes/patient.js"
 import messageRoute from "./routes/message.js";
+import exerciseRoute from "./routes/exercise.js"
+
+
 const app = express();
 const PORT = process.env.PORT || 8642;
 const DB_URI = "mongodb://localhost:27017/clinic_app";
@@ -36,6 +42,7 @@ app.use(appointmentRoute)
 app.use(financialRoute)
 app.use(patientRoute);
 app.use(messageRoute);
+app.use(exerciseRoute);
 
 const connectDB = async () => {
   try {
