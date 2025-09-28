@@ -5,7 +5,7 @@ dotenv.config();
 
 
 const s3Client = new S3Client({
-  region: "default", // دیتاسنتر آروان
+  region: "default", 
   endpoint: "https://exercise.s3.ir-thr-at1.arvanstorage.ir",
   credentials: {
     accessKeyId: process.env.ARVAN_ACCESS_KEY,

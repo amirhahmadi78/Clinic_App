@@ -11,6 +11,7 @@ import financialRoute from "./routes/financial.js";
 import patientRoute from "./routes/patient.js"
 import messageRoute from "./routes/message.js";
 import exerciseRoute from "./routes/exercise.js"
+import noteBookRoute from "./routes/noteBook.js";
 
 
 const app = express();
@@ -43,6 +44,7 @@ app.use(financialRoute)
 app.use(patientRoute);
 app.use(messageRoute);
 app.use(exerciseRoute);
+app.use(noteBookRoute)
 
 const connectDB = async () => {
   try {

@@ -19,7 +19,6 @@ export const uploadExercise = async (req, res,next) => {
       throw error;
     }
     const fileKey = `exercises/${uuidv4()}-${req.file.originalname}`;
-    // console.log("bucket name:", process.env.ARVAN_BUCKET_NAME);
     
     // آماده‌سازی دستور آپلود
     const uploadParams = {
@@ -29,6 +28,7 @@ export const uploadExercise = async (req, res,next) => {
       ACL: "public-read",
       ContentType: req.file.mimetype,
     };
+    
 
     // اجرای آپلود
     await s3Client.send(new PutObjectCommand(uploadParams));
