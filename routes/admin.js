@@ -4,6 +4,8 @@ import { findTherapists,AddPatientToTherapist,GetPatientDetails,adminChangeStatu
 // import { body } from "express-validator";
 const router = express.Router();
 
+router.get("/admin/daily/:localDay")
+
 router.get("/admin/findtherapists",findTherapists)
 
 router.post("/admin/addpatienttotherapist",AddPatientToTherapist)

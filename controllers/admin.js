@@ -15,6 +15,32 @@ import { GetRequests } from "../services/leaveRequestService.js";
 import { FindTherapist } from "../services/therapistService.js";
 import { GetPatients ,PatientDetails} from "../services/patientServise.js";
 
+
+export async function daily(req,res,next) {
+  try {
+    const localDay=req.params.localDay
+    if (!localDay){
+      const error=new Error("لطفا تاریخ مورد نظر را وارد کنید")
+      error.statusCode=400
+      return next(error)
+    }
+    const appointments=await appointment.find({localDay})
+    if (appointments.length==0){
+      const error=new Error("برنامه ی ویزیتی برای تاریخ مورد نظر وجود ندارد")
+      error.statusCode=404
+      return next(error)
+    }
+    res.status(200).json({
+      message:"لیست همه ی جلسات ویزیت تاریخ مورد نظر",
+      appointments
+    })
+  } catch (error) {
+    next(error)
+  }
+  
+}
+
+
 export async function findTherapists(req, res, next) {
   try {
     const { firstName,lastName, phone, percentDefault, role, skills } = req.query;
