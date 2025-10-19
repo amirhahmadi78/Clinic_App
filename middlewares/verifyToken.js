@@ -1,26 +1,17 @@
-import jwt from "jsonwebtoken";
+// export function verifyAuth(req, res, next) {
+//   const accessToken = req.cookies.accessToken;
+//   const csrfHeader = req.headers["x-csrf-token"];
+//   const csrfCookie = req.cookies.csrfToken;
 
-export async function VerifyToken(req, res, next) {
-  try {
-    const AuthHeader = req.get("Authorization");
-    if (!AuthHeader) {
-      const error = new Error("Authorization header missing");
-      error.status = 401;
-      return next(error);
-    }
-    const Decoded = jwt.verify(AuthHeader, "amirmamad");
-    if (!Decoded) {
-      const error = new Error("invalid Token");
-      error.status = 401;
-      return next(error);
-    }
-   req.user = {
-      id: Decoded.userId,
-      role: Decoded.role
-    };
-    next()
-  } catch (error) {
-    error.status = 401;
-    return next(error);
-  }
-}
+//   if (!accessToken || !csrfHeader || csrfHeader !== csrfCookie) {
+//     return res.status(403).json({ message: "CSRF یا توکن معتبر نیست" });
+//   }
+
+//   try {
+//     const decoded = jwt.verify(accessToken, ACCESS_SECRET);
+//     req.user = decoded;
+//     next();
+//   } catch (err) {
+//     return res.status(401).json({ message: "توکن منقضی یا نامعتبر است" });
+//   }
+// }

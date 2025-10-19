@@ -11,6 +11,7 @@ const appointmentSchema = new Schema(
       index: true,
     },
     patientId: { type: Schema.Types.ObjectId, ref: "patient", required: true },
+    patientName:{type:String,required:true},
     start: { type: Date, required: true, index: true }, // UTC Date
     end: { type: Date, required: true, index: true }, // UTC Date
     duration: { type: Number, required: true }, // minutes, computed (end-start)

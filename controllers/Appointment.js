@@ -1,6 +1,6 @@
 import Appointment from "../models/Appointment.js";
 import { DateTime } from "luxon";
-import { ConflictRole } from "../util/ConflictRule.js";
+import { ConflictRole } from "../utils/ConflictRule.js";
 import therapist from "../models/therapist.js";
 import patient from "../models/patient.js";
 import financial from "../models/financial.js";
@@ -10,6 +10,7 @@ export async function AddAppointment(req, res, next) {
     const {
       therapistId,
       patientId,
+      // localDay,
       start,
       duration,
       type,
@@ -53,6 +54,7 @@ export async function AddAppointment(req, res, next) {
     const MakeAppointment = new Appointment({
       therapistId,
       patientId,
+      patientName:PatientExist.firstName+" "+PatientExist.lastName,
       start:startDT.toJSDate(),
       end:endDT.toJSDate(),
       duration,

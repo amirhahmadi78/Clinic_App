@@ -12,7 +12,8 @@ import patientRoute from "./routes/patient.js"
 import messageRoute from "./routes/message.js";
 import exerciseRoute from "./routes/exercise.js"
 import noteBookRoute from "./routes/noteBook.js";
-
+import cors from "cors";
+import cookieParser from "cookie-parser";
 
 const app = express();
 const PORT = process.env.PORT || 8642;
@@ -26,14 +27,17 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-app.use((error, req, res, next) => {
-  console.error(error); 
-  const status = error.statusCode || 500;
-  const message = error.message;
-  res.status(status).json({ message: message });
-  next()
-});
+// اگر فرانت روی دامنه/پورت دیگر است:
+app.use(cors({
+  origin: ["http://localhost:5173"], // یا دامنه فرانت
+  credentials: true,
+}));
+
+
+import { csrfGuard } from "./middlewares/auth.js";
+app.use(csrfGuard);
 
 
 app.use(authRoute);
@@ -45,6 +49,15 @@ app.use(patientRoute);
 app.use(messageRoute);
 app.use(exerciseRoute);
 app.use(noteBookRoute)
+
+app.use((error, req, res, next) => {
+  console.error(error); 
+  const status = error.statusCode || 500;
+  const message = error.message;
+  
+  res.status(status).json({ message });
+  
+});
 
 const connectDB = async () => {
   try {

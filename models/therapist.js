@@ -4,6 +4,14 @@ import { type } from "os";
 import { ref } from "process";
 
 const Schema = mongoose.Schema;
+const RefreshTokenSchema = new mongoose.Schema({
+  tokenHash: { type: String, required: true },   
+  expiresAt: { type: Date, required: true },
+  createdAt: { type: Date, default: Date.now },
+  revokedAt: { type: Date },
+  userAgent: String,
+  ip: String,
+});
 
 const TherapistSchema = new Schema(
   {
@@ -39,7 +47,7 @@ const TherapistSchema = new Schema(
   percentIntroduced: { type: Number, default: 60 },
     role: {
       type: String,
-      enum: ["SLP", "OT", "PSY", "PT"],
+      enum: ["SLP", "OT", "PSY", "PT","therapist"],
       required: true,
     },
     skills: {
@@ -61,13 +69,18 @@ const TherapistSchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: "patient",
       },
+      
     ],
+     refreshTokens:{
+   type: [RefreshTokenSchema]
+}
   },
   {
     timestamps: true,
     toJSON: {
       transform(doc, ret) {
         delete ret.password;
+        delete ret.refreshTokens;
         return ret;
       },
     },
