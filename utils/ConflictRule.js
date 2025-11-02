@@ -9,7 +9,7 @@ export function ConflictRole(start,end,otherStart,otherEnd){
   }
  
   if (start < otherEnd && end > otherStart) {
-    const error = new Error("تایم درمانگر در زمان مورد نظر خالی نمی باشد");
+    const error = new Error("تایم درمانگر یا مراجع در زمان مورد نظر خالی نمی باشد");
     error.statusCode = 409;
     throw error;
 }

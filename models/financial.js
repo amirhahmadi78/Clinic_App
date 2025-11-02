@@ -7,6 +7,15 @@ const financialSchema = new Schema({
     required: true,
     unique:true
     },
+    therapistName:{
+      type:String,
+      required:true
+    },
+    patientName:{
+       type:String,
+      required:true
+    }
+    ,
   therapistId: {
     type: Schema.Types.ObjectId,
     ref: "therapist",

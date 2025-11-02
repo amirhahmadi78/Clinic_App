@@ -10,6 +10,9 @@ const appointmentSchema = new Schema(
       required: true,
       index: true,
     },
+    therapistName:{type:String,
+      required:true
+    },
     patientId: { type: Schema.Types.ObjectId, ref: "patient", required: true },
     patientName:{type:String,required:true},
     start: { type: Date, required: true, index: true }, // UTC Date
@@ -17,7 +20,7 @@ const appointmentSchema = new Schema(
     duration: { type: Number, required: true }, // minutes, computed (end-start)
     type: {
       type: String,
-      enum: ["session", "assessment", "break", "blocked"],
+      enum: ["session", "assessment", "break", "online","blocked"],
       default: "session",
     },
     patientFee:{

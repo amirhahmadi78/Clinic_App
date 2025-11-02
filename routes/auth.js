@@ -1,6 +1,7 @@
 import express from "express";
 import { AdminLogin , AdminSignUp ,  RefreshSession,
-  AdminLogout, PatientLogin,PatientSignUp,TherapistLogin,TherapistSignUp,TherapisLogout } from "../controllers/auth.js";
+  AdminLogout, PatientLogin,PatientSignUp,TherapistLogin,TherapistSignUp,TherapisLogout, 
+  PatientLogout} from "../controllers/auth.js";
 import { body } from "express-validator";
 import { requireAuth, csrfGuard } from "../middlewares/auth.js";
 const router = express.Router();
@@ -23,7 +24,7 @@ router.post(
   AdminLogin
 );
 
-router.post("/auth/refresh", RefreshSession);
+router.get("/auth/refresh", RefreshSession);
 
 router.post("/logout/admin", requireAuth, csrfGuard, AdminLogout);
 
@@ -64,4 +65,13 @@ router.post(
 );
 
 router.post("/logout/therapist", requireAuth, csrfGuard, TherapisLogout);
+
+
+router.post("/logout/admin", requireAuth, csrfGuard, AdminLogout);
+
+router.post("/logout/patient", requireAuth, csrfGuard, PatientLogout);
+
+
 export default router;
+
+

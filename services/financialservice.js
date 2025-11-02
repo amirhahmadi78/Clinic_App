@@ -36,9 +36,13 @@ import financial from "../models/financial.js";
     } else {
       percent = percentDefault;
     }
+    const patientName=OnePatient.firstName+" "+OnePatient.lastName
+    const therapistName=OneTherapist.firstName+" "+OneTherapist.lastName
     const therapistShare = (patientFee * percent) / 100;
     const clinicShare = patientFee - therapistShare;
     const newFinancial = new financial({
+      patientName,
+      therapistName,
       appointmentId,
       therapistId,
       patientId,

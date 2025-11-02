@@ -4,7 +4,7 @@ import patient from "../models/patient.js";
 
 export async function showAppointments(req,res,next){
     try {
-         const patientId="68cbce268f3612e82e6ffeb4"||req.user.id //felan
+         const patientId=req.user.id 
     if(!patientId){
            const error=new Error("لطفا اول وارد شوید!")
             error.statusCode=403
@@ -35,7 +35,7 @@ export async function showAppointments(req,res,next){
 
 export async function showTherapists(req,res,next){
     try {
-         const patientId="68cbce268f3612e82e6ffeb4"||req.user.id //felan
+         const patientId=req.user.id 
     if(!patientId){
            const error=new Error("لطفا اول وارد شوید!")
             error.statusCode=403

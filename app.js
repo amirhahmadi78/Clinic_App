@@ -36,9 +36,9 @@ app.use(cors({
 }));
 
 
+
 import { csrfGuard } from "./middlewares/auth.js";
 app.use(csrfGuard);
-
 
 app.use(authRoute);
 app.use(therapistRoute)

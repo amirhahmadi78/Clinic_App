@@ -13,6 +13,7 @@ const RefreshTokenSchema = new mongoose.Schema({
 
 const PatientSchema=new Schema({
     modeluser: { type: String, default: "patient" },
+     role: { type: String, default: "patient" },
     username:{
         type:String,
         required:true,
@@ -30,22 +31,30 @@ const PatientSchema=new Schema({
         type:String,
         required:true
     },
-    email:{
+    phone:{
         type:String,
         required:true,
         unique:true
     },
-    phone:{
-        type:Number,
-        required:true,
-        unique:true
+    paymentType:{type:String,
+      enum:["bimeh","naghd"],
+      required:true,
+      default:"naghd"
     },
+    discountPercent:{
+      type:Number
+    }
+    ,
     therapists: [
         {
           type: Schema.Types.ObjectId,
           ref: "therapist"
         }
     ],
+    address:{
+       type:String,
+        required:true
+    },
     introducedBy: { type: mongoose.Schema.Types.ObjectId, ref: "therapist" },
     refreshTokens:{
    type: [RefreshTokenSchema]

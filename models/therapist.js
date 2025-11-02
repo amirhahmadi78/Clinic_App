@@ -2,6 +2,7 @@ import { ObjectId } from "bson";
 import mongoose from "mongoose";
 import { type } from "os";
 import { ref } from "process";
+import { start } from "repl";
 
 const Schema = mongoose.Schema;
 const RefreshTokenSchema = new mongoose.Schema({
@@ -12,6 +13,40 @@ const RefreshTokenSchema = new mongoose.Schema({
   userAgent: String,
   ip: String,
 });
+
+
+const def_Appointment = new mongoose.Schema({
+  patientId: { type: mongoose.Schema.Types.ObjectId, ref: "patient", required: true },
+  patientName:{type:String},
+  start: { type: Date, required: true }, 
+  day:{type:String,required:true},
+  end: { type: Date ,required:true}, 
+  duration: { type: Number, required:true }, 
+  note: String, 
+  room: String,
+  expiresAt:{type:Date} 
+});
+
+const workDaySchema = new mongoose.Schema({
+  day: {
+    type: String,
+    enum: [
+      "Saturday",
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+    ],
+    required: true,
+  },
+  startTime: { type: String, required: true },
+  endTime: { type: String, required: true },
+  defaultAppointments: [def_Appointment],
+});
+
+
 
 const TherapistSchema = new Schema(
   {
@@ -35,20 +70,21 @@ const TherapistSchema = new Schema(
     },
     email: {
       type: String,
+    },
+    phone: {
+      type: String,
       required: true,
       unique: true,
     },
-    phone: {
-      type: Number,
-      required: true,
-      unique: true,
+    workDays:{type:[workDaySchema],
+      required:true
     },
     percentDefault: { type: Number, default: 50 },    
   percentIntroduced: { type: Number, default: 60 },
     role: {
       type: String,
       enum: ["SLP", "OT", "PSY", "PT","therapist"],
-      required: true,
+      default:"therapist"
     },
     skills: {
       type: [String],
@@ -73,6 +109,10 @@ const TherapistSchema = new Schema(
     ],
      refreshTokens:{
    type: [RefreshTokenSchema]
+},
+isActive:{
+  type:Boolean,
+  default:true
 }
   },
   {

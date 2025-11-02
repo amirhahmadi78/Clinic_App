@@ -60,7 +60,7 @@ export async function AdminSignUp(req, res, next) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const newAdmin = new admin({
-      usermodel:"admin",
+      modeluser:"admin",
       username,
       password: hashedPassword,
       firstName,
@@ -71,7 +71,7 @@ export async function AdminSignUp(req, res, next) {
     });
 
 
-  const accessToken = signAccessToken({ usermodel:newAdmin.usermodel,firstName:newAdmin.firstName,lastName:newAdmin.lastName, id: newAdmin._id, role:newAdmin.role });
+  const accessToken = signAccessToken({ modeluser:newAdmin.modeluser,firstName:newAdmin.firstName,lastName:newAdmin.lastName, id: newAdmin._id, role:newAdmin.role });
     const refreshToken = signRefreshToken({ email, id: newAdmin._id, role });
 
     // ذخیره هش refresh در DB (rotation-friendly)
@@ -86,8 +86,8 @@ export async function AdminSignUp(req, res, next) {
 
     await newAdmin.save();
 
-    const csrfToken = generateCsrfToken();
-    setAuthCookies(res, accessToken, refreshToken, csrfToken)
+    // const csrfToken = generateCsrfToken();
+    // setAuthCookies(res, accessToken, refreshToken, csrfToken)
 
     res.status(200).json({
       message: "ادمین با موفقیت ثبت نام شد!",
@@ -123,7 +123,7 @@ export async function AdminLogin(req, res, next) {
         return next(error);
       }
         // صدور توکن‌ها
-    const payload = { usermodel:OneAdmin.usermodel,firstName:OneAdmin.firstName,lastName:OneAdmin.lastName, id: OneAdmin._id, role:OneAdmin.role  };
+    const payload = { modeluser:OneAdmin.modeluser,firstName:OneAdmin.firstName,lastName:OneAdmin.lastName, id: OneAdmin._id, role:OneAdmin.role  };
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 
@@ -162,20 +162,23 @@ export async function AdminLogin(req, res, next) {
 
 export async function RefreshSession(req, res, next) {
   try {
+
+   
+    
     const rToken = req.cookies?.refresh_token;
     if (!rToken) return res.status(401).json({ message: "No refresh token" });
 
     const decoded = verifyRefresh(rToken); // throws if invalid/expired
     var user
-    if (decoded.usermodel=="admin"){
+    if (decoded.modeluser=="admin"){
        user = await admin.findById(decoded.id);
     }
 
-        if (decoded.usermodel=="therapist"){
+        if (decoded.modeluser=="therapist"){
        user = await therapist.findById(decoded.id);
     }
 
-        if (decoded.usermodel=="patient"){
+        if (decoded.modeluser=="patient"){
        user = await patient.findById(decoded.id);
     }
 
@@ -192,11 +195,12 @@ export async function RefreshSession(req, res, next) {
 
     // Rotation: revoke قدیمی و ساخت جدید
     entry.revokedAt = new Date();
+user.refreshTokens = user.refreshTokens.filter(t => !t.revokedAt && t.expiresAt > new Date());
 
-    const payload = { usermodel:user.usermodel,firstName:user.firstName,lastName:user.lastName, id: user._id, role:user.role  };
+    const payload = { modeluser:user.modeluser,firstName:user.firstName,lastName:user.lastName, id: user._id, role:user.role  };
     const newAccess = signAccessToken(payload);
     const newRefresh = signRefreshToken(payload);
-
+    
     user.refreshTokens.push({
       tokenHash: sha256(newRefresh),
       expiresAt: new Date(Date.now() + (1000 * 60 * 60 * 24 * 7)),
@@ -285,7 +289,7 @@ export async function PatientSignUp(req, res, next) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const newPatient = new patient({
-      usermodel:"patient",
+      modeluser:"patient",
       username,
       password: hashedPassword,
       firstName,
@@ -296,7 +300,7 @@ export async function PatientSignUp(req, res, next) {
     });
 
 
-  const accessToken = signAccessToken({ usermodel:newPatient.usermodel,firstName:newPatient.firstName,lastName:newPatient.lastName, id: newPatient._id, role:newPatient.role });
+  const accessToken = signAccessToken({ modeluser:newPatient.modeluser,firstName:newPatient.firstName,lastName:newPatient.lastName, id: newPatient._id, role:newPatient.role });
     const refreshToken = signRefreshToken({ email, id: newPatient._id, role });
 
     // ذخیره هش refresh در DB (rotation-friendly)
@@ -348,7 +352,7 @@ export async function PatientLogin(req, res, next) {
         return next(error);
       }
         // صدور توکن‌ها
-    const payload = { usermodel:OnePatient.usermodel,firstName:OnePatient.firstName,lastName:OnePatient.lastName, id: OnePatient._id, role:OnePatient.role  };
+    const payload = { modeluser:OnePatient.modeluser,firstName:OnePatient.firstName,lastName:OnePatient.lastName, id: OnePatient._id, role:OnePatient.role  };
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 
@@ -455,7 +459,7 @@ export async function TherapistSignUp(req, res, next) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const newTherapist = new therapist({
-      usermodel:"therapist",
+      modeluser:"therapist",
       username,
       password: hashedPassword,
       firstName,
@@ -466,7 +470,7 @@ export async function TherapistSignUp(req, res, next) {
     });
 
 
-  const accessToken = signAccessToken({ usermodel:newTherapist.usermodel,firstName:newTherapist.firstName,lastName:newTherapist.lastName, id: newTherapist._id, role:newTherapist.role });
+  const accessToken = signAccessToken({ modeluser:newTherapist.modeluser,firstName:newTherapist.firstName,lastName:newTherapist.lastName, id: newTherapist._id, role:newTherapist.role });
     const refreshToken = signRefreshToken({ email, id: newTherapist._id, role });
 
     // ذخیره هش refresh در DB (rotation-friendly)
@@ -519,7 +523,7 @@ console.log("vared shod");
         return next(error);
       }
         // صدور توکن‌ها
-    const payload = { usermodel:OneTherapist.usermodel,firstName:OneTherapist.firstName,lastName:OneTherapist.lastName, id: OneTherapist._id, role:OneTherapist.role  };
+    const payload = { modeluser:OneTherapist.modeluser,firstName:OneTherapist.firstName,lastName:OneTherapist.lastName, id: OneTherapist._id, role:OneTherapist.role  };
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 

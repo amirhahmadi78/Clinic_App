@@ -26,6 +26,7 @@ export function csrfGuard(req, res, next) {
     "/signup/admin",
     "/signup/patient",
     "/signup/therapist",
+    "/auth/refresh"
   ];
 
   if (exemptRoutes.includes(req.path)) {
