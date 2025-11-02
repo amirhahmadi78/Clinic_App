@@ -74,3 +74,5 @@ const PatientSchema=new Schema({
 })
 
 export default mongoose.model("patient",PatientSchema)
+
+
