@@ -17,7 +17,7 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 const PORT = process.env.PORT || 8642;
-const DB_URI = "mongodb://localhost:27017/clinic_app";
+const DB_URI = process.env.MONGO_URI||"mongodb://localhost:27017/clinic_app";
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
