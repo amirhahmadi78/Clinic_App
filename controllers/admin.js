@@ -1,7 +1,7 @@
 
 import patient from "../models/patient.js";
 import bcrypt from "bcrypt";
-import { validationResult } from "express-validator";
+
 import therapist from "../models/therapist.js";
 
 import appointment from "../models/Appointment.js";

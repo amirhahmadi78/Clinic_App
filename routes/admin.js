@@ -1,11 +1,11 @@
 import express from "express";
-// import { isAdminOrInternalManager } from "../middlewares/CheckRole.js"; بعدا بزارم توی افزودن مراجع به درمانگر felan
+
 import TherapistAtDay, { findTherapists,AddPatientToTherapist,GetPatientDetails,adminChangeStatusAndMakefinance,GetAllFinancial,GetPatientsList, GetFindLeaveRequests,GetmonthTherapistIncome, GetPatientFinance, MakeTherapist, EditTherapist, DeleteTherapist, MakePatient, EditPatient, DeletePatient, RelateTherapist_Patient} from "../controllers/admin.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
-// import { body } from "express-validator";
+
 const router = express.Router();
 
-// router.get("/admin/daily/:localDay",)
+
 
 router.get("/admin/findtherapists",requireAuth,csrfGuard,findTherapists)
 

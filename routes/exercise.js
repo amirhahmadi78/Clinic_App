@@ -1,5 +1,5 @@
 import express from "express";
-import { body } from "express-validator";
+
 import { uploadExercise ,getExercises} from "../controllers/exercise.js";
 import multer from "multer";
 const router = express.Router();

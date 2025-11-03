@@ -1,6 +1,6 @@
 import express from "express";
 import { ShowPatients,ShowRequests,therapistChangeStatusAndMakefinance,GetdailyTherapistIncome,GetmonthTherapistIncome,writeReport,postDailyLeaveRequest,postHourlyLeaveRequest } from "../controllers/therapist.js";
-// import { body } from "express-validator";
+
 const router = express.Router();
 
 

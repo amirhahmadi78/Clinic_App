@@ -1,4 +1,4 @@
-// middlewares/auth.js
+
 import { verifyAccess } from "../utils/auth.js";
 
 const UNSAFE_METHODS = new Set(["POST","PUT","PATCH","DELETE","GET"]);
