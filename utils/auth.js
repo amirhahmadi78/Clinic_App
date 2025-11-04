@@ -47,6 +47,6 @@ export const refreshCookieOptions = {
 };
 
 export const csrfCookieOptions = {
-   httpOnly: false,
+   httpOnly: true,
   sameSite: isProd ? "None" : "Lax",
 };
