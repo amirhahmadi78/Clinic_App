@@ -22,7 +22,7 @@ const DB_URI = process.env.MONGO_URI||"mongodb://localhost:27017/clinic_app";
 
 // اگر فرانت روی دامنه/پورت دیگر است:
 app.use(cors({
-  origin: "*", // یا دامنه فرانت
+  origin: "http://194.180.11.197",// یا دامنه فرانت
   credentials: true,
 }));
 

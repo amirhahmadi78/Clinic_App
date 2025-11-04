@@ -33,18 +33,18 @@ export function generateCsrfToken() {
 // تنظیمات کوکی‌ها
 export const accessCookieOptions = {
   httpOnly: true,
-  secure: true,
-  sameSite: "none"||"lax",
+  secure: false,
+  sameSite: "lax",
   maxAge: 1000 * 60 * 15,
 };
 export const refreshCookieOptions = {
   httpOnly: true,
-  secure: true,
-  sameSite: "none"||"lax",
+  secure: false,
+  sameSite: "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 export const csrfCookieOptions = {
   httpOnly: false,
-  secure: true,
-  sameSite: "none"||"lax",
+  secure: false,
+  sameSite: "lax",
 };
