@@ -21,8 +21,8 @@ const DB_URI = process.env.MONGO_URI||"mongodb://localhost:27017/clinic_app";
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET","POST","PUT","DELETE","OPTIONS","PATCH");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,x-csrf-token");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,PUT,PATCH");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
   next();
 });
 app.use(express.json());
@@ -76,3 +76,4 @@ const connectDB = async () => {
   }
 };
 connectDB();
+
