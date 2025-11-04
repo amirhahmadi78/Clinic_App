@@ -34,7 +34,7 @@ export function generateCsrfToken() {
 export const accessCookieOptions = {
   httpOnly: true,
   secure: false,           // در dev می‌تونی false بگذاری اگر روی http هستی
-  sameSite: "strict",
+  sameSite: "Lax",
 
   maxAge: 1000 * 60 * 15,   // 15 دقیقه
 };
@@ -42,11 +42,11 @@ export const accessCookieOptions = {
 export const refreshCookieOptions = {
   httpOnly: true,
   secure: false,
-  sameSite: "strict",
+  sameSite: "Lax",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
 export const csrfCookieOptions = {
    httpOnly: false,
-  sameSite: "strict",
+  sameSite: "Lax",
 };

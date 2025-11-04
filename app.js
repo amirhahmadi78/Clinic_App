@@ -19,21 +19,36 @@ const app = express();
 const PORT = process.env.PORT || 8642;
 const DB_URI = process.env.MONGO_URI||"mongodb://localhost:27017/clinic_app";
 
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,PUT,PATCH");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
-  next();
-});
+// app.use((req, res, next) => {
+//   res.setHeader("Access-Control-Allow-Origin", "*");
+//   res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,PUT,PATCH");
+//   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+//   next();
+// });
+
+
+app.use(cors({
+  origin: [
+    "http://localhost:5173",      // آدرس توسعه
+    "https://clinic.ir"           // آدرس اصلی سایت
+  ],
+  credentials: true,              // حتما باید باشه تا کوکی‌ها برن و بیان
+  methods: ["GET", "POST", "PUT", "DELETE","PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
+}));
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+
+
 // اگر فرانت روی دامنه/پورت دیگر است:
-app.use(cors({
-  origin: ["http://localhost:5173"], // یا دامنه فرانت
-  credentials: true,
-}));
+// app.use(cors({
+//   origin: ["http://localhost:5173"], // یا دامنه فرانت
+//   credentials: true,
+// }));
 
 
 
