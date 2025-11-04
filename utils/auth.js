@@ -32,27 +32,21 @@ export function generateCsrfToken() {
 
 // تنظیمات کوکی‌ها
 export const accessCookieOptions = {
-   httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // در dev false باشه، در prod true
-    sameSite: "None", // برای cross-site
-    maxAge: 1000 * 60 * 15,
-    domain: cookieDomain,
-    path: "/", 
+  httpOnly: true,
+  secure: false,           // در dev می‌تونی false بگذاری اگر روی http هستی
+  sameSite: "strict",
+
+  maxAge: 1000 * 60 * 15,   // 15 دقیقه
 };
 
 export const refreshCookieOptions = {
-   httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "None",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    domain: cookieDomain,
+  httpOnly: true,
+  secure: false,
+  sameSite: "strict",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
 export const csrfCookieOptions = {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "None",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    domain: cookieDomain,
-    path: "/",
+   httpOnly: false,
+  sameSite: "strict",
 };
