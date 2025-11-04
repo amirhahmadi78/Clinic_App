@@ -33,20 +33,21 @@ export function generateCsrfToken() {
 // تنظیمات کوکی‌ها
 export const accessCookieOptions = {
   httpOnly: true,
-  secure: isProd,           // در dev می‌تونی false بگذاری اگر روی http هستی
-  sameSite: isProd ? "None" : "Lax",
+  secure: false,           // در dev می‌تونی false بگذاری اگر روی http هستی
+  sameSite:  "None" ,
 
   maxAge: 1000 * 60 * 15,   // 15 دقیقه
 };
 
 export const refreshCookieOptions = {
   httpOnly: true,
-  secure: isProd,
-  sameSite: isProd ? "None" : "Lax",
+  secure: false,
+  sameSite: "None" ,
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
 export const csrfCookieOptions = {
    httpOnly: false,
-  sameSite: isProd ? "None" : "Lax",
+  sameSite:  "None" ,
+  secure:false
 };
