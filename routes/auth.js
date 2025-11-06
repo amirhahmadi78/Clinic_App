@@ -1,9 +1,11 @@
 import express from "express";
 import { AdminLogin , AdminSignUp ,  RefreshSession,
   AdminLogout, PatientLogin,PatientSignUp,TherapistLogin,TherapistSignUp,TherapisLogout, 
-  PatientLogout} from "../controllers/auth.js";
+  PatientLogout,
+  getCsrfToken} from "../controllers/auth.js";
 import { body } from "express-validator";
 import { requireAuth, csrfGuard } from "../middlewares/auth.js";
+import { csrfCookieOptions, generateCsrfToken } from "../utils/auth.js";
 const router = express.Router();
 
 router.post(
@@ -70,6 +72,12 @@ router.post("/logout/therapist", requireAuth, csrfGuard, TherapisLogout);
 router.post("/logout/admin", requireAuth, csrfGuard, AdminLogout);
 
 router.post("/logout/patient", requireAuth, csrfGuard, PatientLogout);
+
+router.get("/auth/csrf", (req, res) => {
+  const newCsrf = generateCsrfToken();
+  res.cookie("csrf_token", newCsrf, csrfCookieOptions);
+  res.json({ csrfToken: newCsrf });
+});
 
 
 export default router;

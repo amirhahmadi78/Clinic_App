@@ -13,14 +13,15 @@ import {
   accessCookieOptions,
   refreshCookieOptions,
   csrfCookieOptions,
+  setAuthCookies,
 } from "../utils/auth.js";
 
 
-function setAuthCookies(res, accessToken, refreshToken, csrfToken) {
-  res.cookie("access_token", accessToken, accessCookieOptions);
-  res.cookie("refresh_token", refreshToken, refreshCookieOptions);
-  res.cookie("csrf_token", csrfToken, csrfCookieOptions); // non-HttpOnly
-}
+// function setAuthCookies(res, accessToken, refreshToken, csrfToken) {
+//   res.cookie("access_token", accessToken, accessCookieOptions);
+//   res.cookie("refresh_token", refreshToken, refreshCookieOptions);
+//   res.cookie("csrf_token", csrfToken, csrfCookieOptions); // non-HttpOnly
+// }
 
 
 export async function AdminSignUp(req, res, next) {
@@ -102,108 +103,97 @@ export async function AdminSignUp(req, res, next) {
     next(error);
   }
 }
-
 export async function AdminLogin(req, res, next) {
   try {
-    const errors = validationResult(req);
-
-    if (!errors.isEmpty()) {
-      const error = new Error("مقادیر ورودی اشتباه است");
-      error.statusCode = 422;
-      next(error);
-    }
     const { username, password } = req.body;
 
     const OneAdmin = await admin.findOne({ username });
-    if (OneAdmin) {
-      const ok =bcrypt.compare(password, OneAdmin.password);
-      if (!ok) {
-        const error = new Error("نام کاربری یا رمز عبور نامعتبر است.");
-        error.statusCode = 401;
-        return next(error);
-      }
-        // صدور توکن‌ها
-    const payload = { modeluser:OneAdmin.modeluser,firstName:OneAdmin.firstName,lastName:OneAdmin.lastName, id: OneAdmin._id, role:OneAdmin.role  };
+    if (!OneAdmin) {
+      return res.status(401).json({ message: "نام کاربری یا رمز عبور نامعتبر است." });
+    }
+
+    const ok = await bcrypt.compare(password, OneAdmin.password);
+    if (!ok) {
+      return res.status(401).json({ message: "نام کاربری یا رمز عبور نامعتبر است." });
+    }
+
+    const payload = {
+      id: OneAdmin._id,
+      role: OneAdmin.role,
+      modeluser: OneAdmin.modeluser,
+      firstName: OneAdmin.firstName,
+      lastName: OneAdmin.lastName,
+    };
+
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 
-    // ذخیره هش refresh در DB (multi-device)
     const tokenHash = sha256(refreshToken);
-    const expiresAt = new Date(Date.now() + (1000 * 60 * 60 * 24 * 7));
+
     OneAdmin.refreshTokens.push({
       tokenHash,
-      expiresAt,
+      expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
       userAgent: req.get("user-agent"),
       ip: req.ip,
     });
+
     await OneAdmin.save();
 
-    // CSRF token (برای double-submit)
     const csrfToken = generateCsrfToken();
     setAuthCookies(res, accessToken, refreshToken, csrfToken);
 
+    res.json({
+      user: payload,
+      csrfToken,
+      message: "ورود موفق",
+    });
 
-      res.status(200).json({
-         user:OneAdmin,
-         csrfToken,
-        message:"ورود با موفقیت انجام شد"
-      });
-    } else {
-      const error = new Error("نام کاربری یا رمز عبور نامعتبر است.");
-      error.statusCode = 401;
-      return next(error);
-    }
-  } catch (error) {
-    error.message = "your entered data is invalid";
-    error.statusCode = 401;
-    next(error);
+  } catch (e) {
+    next(e);
   }
 }
 
-export async function RefreshSession(req, res, next) {
-  try {
 
-   
+export async function RefreshSession(req, res) {
+  try {
+    console.log("omaadrefresh");
     
     const rToken = req.cookies?.refresh_token;
     if (!rToken) return res.status(401).json({ message: "No refresh token" });
 
-    const decoded = verifyRefresh(rToken); // throws if invalid/expired
-    var user
-    if (decoded.modeluser=="admin"){
-       user = await admin.findById(decoded.id);
-    }
+    const decoded = verifyRefresh(rToken);
 
-        if (decoded.modeluser=="therapist"){
-       user = await therapist.findById(decoded.id);
-    }
+    let userModel;
+    if (decoded.modeluser === "admin") userModel = admin;
+    if (decoded.modeluser === "therapist") userModel = therapist;
+    if (decoded.modeluser === "patient") userModel = patient;
 
-        if (decoded.modeluser=="patient"){
-       user = await patient.findById(decoded.id);
-    }
-
-
+    const user = await userModel.findById(decoded.id);
     if (!user) return res.status(401).json({ message: "User not found" });
-   
 
-    // وجود توکن در DB با هش
     const hash = sha256(rToken);
-    const entry = user.refreshTokens.find(t => t.tokenHash === hash && !t.revokedAt);
+    const entry = user.refreshTokens.find(t => t.tokenHash === hash);
+
     if (!entry || entry.expiresAt < new Date()) {
-      return res.status(401).json({ message: "Refresh token invalid/revoked" });
+      return res.status(401).json({ message: "Refresh invalid" });
     }
 
-    // Rotation: revoke قدیمی و ساخت جدید
     entry.revokedAt = new Date();
-user.refreshTokens = user.refreshTokens.filter(t => !t.revokedAt && t.expiresAt > new Date());
 
-    const payload = { modeluser:user.modeluser,firstName:user.firstName,lastName:user.lastName, id: user._id, role:user.role  };
+    const payload = {
+      id: user._id,
+      role: user.role,
+      modeluser: user.modeluser,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    };
+
     const newAccess = signAccessToken(payload);
     const newRefresh = signRefreshToken(payload);
-    
+
     user.refreshTokens.push({
       tokenHash: sha256(newRefresh),
-      expiresAt: new Date(Date.now() + (1000 * 60 * 60 * 24 * 7)),
+      expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
       userAgent: req.get("user-agent"),
       ip: req.ip,
     });
@@ -213,13 +203,13 @@ user.refreshTokens = user.refreshTokens.filter(t => !t.revokedAt && t.expiresAt 
     const newCsrf = generateCsrfToken();
     setAuthCookies(res, newAccess, newRefresh, newCsrf);
 
-    res.status(200).json({ message: "session refreshed" ,
-      csrfToken:newCsrf
-    });
+    res.json({ csrfToken: newCsrf, message: "session refreshed" });
+
   } catch (e) {
-    return res.status(401).json({ message: "Cannot refresh session" });
+    res.status(401).json({ message: "Cannot refresh session" });
   }
 }
+
 
 
 export async function AdminLogout(req, res, next) {
@@ -334,58 +324,51 @@ export async function PatientSignUp(req, res, next) {
 
 export async function PatientLogin(req, res, next) {
   try {
-    const errors = validationResult(req);
-
-    if (!errors.isEmpty()) {
-      const error = new Error("مقادیر ورودی اشتباه است");
-      error.statusCode = 422;
-      next(error);
-    }
     const { username, password } = req.body;
 
     const OnePatient = await patient.findOne({ username });
-    if (OnePatient) {
-      const ok =bcrypt.compare(password, OnePatient.password);
-      if (!ok) {
-        const error = new Error("نام کاربری یا رمز عبور نامعتبر است.");
-        error.statusCode = 401;
-        return next(error);
-      }
-        // صدور توکن‌ها
-    const payload = { modeluser:OnePatient.modeluser,firstName:OnePatient.firstName,lastName:OnePatient.lastName, id: OnePatient._id, role:OnePatient.role  };
+    if (!OnePatient) {
+      return res.status(401).json({ message: "نام کاربری یا رمز عبور نامعتبر است." });
+    }
+
+    const ok = await bcrypt.compare(password, OnePatient.password);
+    if (!ok) {
+      return res.status(401).json({ message: "نام کاربری یا رمز عبور نامعتبر است." });
+    }
+
+    const payload = {
+      id: OnePatient._id,
+      role: OnePatient.role,
+      modeluser: OnePatient.modeluser,
+      firstName: OnePatient.firstName,
+      lastName: OnePatient.lastName,
+    };
+
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 
-    // ذخیره هش refresh در DB (multi-device)
     const tokenHash = sha256(refreshToken);
-    const expiresAt = new Date(Date.now() + (1000 * 60 * 60 * 24 * 7));
+
     OnePatient.refreshTokens.push({
       tokenHash,
-      expiresAt,
+      expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
       userAgent: req.get("user-agent"),
       ip: req.ip,
     });
+
     await OnePatient.save();
 
-    // CSRF token (برای double-submit)
     const csrfToken = generateCsrfToken();
     setAuthCookies(res, accessToken, refreshToken, csrfToken);
 
+    res.json({
+      user: payload,
+      csrfToken,
+      message: "ورود موفق",
+    });
 
-      res.status(200).json({
-         user:OnePatient,
-         csrfToken,
-        message:"ورود با موفقیت انجام شد"
-      });
-    } else {
-      const error = new Error("نام کاربری یا رمز عبور نامعتبر است.");
-      error.statusCode = 401;
-      return next(error);
-    }
-  } catch (error) {
-    error.message = "your entered data is invalid";
-    error.statusCode = 401;
-    next(error);
+  } catch (e) {
+    next(e);
   }
 }
 
@@ -504,61 +487,56 @@ export async function TherapistSignUp(req, res, next) {
 
 export async function TherapistLogin(req, res, next) {
   try {
-    const errors = validationResult(req);
-
-    if (!errors.isEmpty()) {
-      const error = new Error("مقادیر ورودی اشتباه است");
-      error.statusCode = 422;
-      next(error);
-    }
     const { username, password } = req.body;
-console.log("vared shod");
 
     const OneTherapist = await therapist.findOne({ username });
-    if (OneTherapist) {
-      const ok =bcrypt.compare(password, OneTherapist.password);
-      if (!ok) {
-        const error = new Error("نام کاربری یا رمز عبور نامعتبر است.");
-        error.statusCode = 401;
-        return next(error);
-      }
-        // صدور توکن‌ها
-    const payload = { modeluser:OneTherapist.modeluser,firstName:OneTherapist.firstName,lastName:OneTherapist.lastName, id: OneTherapist._id, role:OneTherapist.role  };
+    if (!OneTherapist) {
+      return res.status(401).json({ message: "نام کاربری یا رمز عبور نامعتبر است." });
+    }
+
+    const ok = await bcrypt.compare(password, OneTherapist.password);
+    if (!ok) {
+      return res.status(401).json({ message: "نام کاربری یا رمز عبور نامعتبر است." });
+    }
+
+    const payload = {
+      id: OneTherapist._id,
+      role: OneTherapist.role,
+      modeluser: OneTherapist.modeluser,
+      firstName: OneTherapist.firstName,
+      lastName: OneTherapist.lastName,
+      percentDefault:OneTherapist.percentDefault
+      
+    };
+
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 
-    // ذخیره هش refresh در DB (multi-device)
     const tokenHash = sha256(refreshToken);
-    const expiresAt = new Date(Date.now() + (1000 * 60 * 60 * 24 * 7));
+
     OneTherapist.refreshTokens.push({
       tokenHash,
-      expiresAt,
+      expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
       userAgent: req.get("user-agent"),
       ip: req.ip,
     });
+
     await OneTherapist.save();
 
-    // CSRF token (برای double-submit)
     const csrfToken = generateCsrfToken();
     setAuthCookies(res, accessToken, refreshToken, csrfToken);
 
+    res.json({
+      user: payload,
+      csrfToken,
+      message: "ورود موفق",
+    });
 
-      res.status(200).json({
-         user:OneTherapist,
-         csrfToken,
-        message:"ورود با موفقیت انجام شد"
-      });
-    } else {
-      const error = new Error("نام کاربری یا رمز عبور نامعتبر است.");
-      error.statusCode = 401;
-      return next(error);
-    }
-  } catch (error) {
-    error.message = "your entered data is invalid";
-    error.statusCode = 401;
-    next(error);
+  } catch (e) {
+    next(e);
   }
 }
+
 
 
 
@@ -591,216 +569,16 @@ export async function TherapisLogout(req, res, next) {
 }
 
 
-// export async function PatientSignUp(req, res, next) {
-//   try {
-//     const errors = validationResult(req);
 
-//     if (!errors.isEmpty()) {
-//       const error = new Error("لطفا مقادیر را درست وارد کنید");
-//       error.statusCode = 422;
-//       error.data = errors.array();
-//       throw error;
-//     }
-//     const { username, firstName,lastName, phone, email, password,introducedBy } = req.body;
+export const getCsrfToken = (req, res) => {
+  try {
     
-//  const existUser = await patient.findOne({
-//       $or: [{ username }, { email },{phone}],
-//     });
-
-//     if (existUser) {
-//       let message = "";
-//        if (existUser.username === username) {
-//         message = "نام کاربری قبلاً ثبت شده است!";
-//       } else if (existUser.email === email) {
-//         message = "ایمیل قبلاً ثبت شده است!";
-//       } else if (existUser.phone===phone) {
-//         message = "شماره تلفن قبلاً ثبت شده است!"
-//       }else{
-//         message="ورودی ها نا معتبر هستند"
-//       }
-
-//       const error = new Error(message);
-//       error.statusCode = 409;
-//       return next(error);
-//     }
-
-
-//     const hashedPassword = await bcrypt.hash(password, 12);
-
-//     const newPatient = new patient({
-//       username,
-//       password: hashedPassword,
-//       firstName,
-//       lastName,
-//       email,
-//       phone,
-//       introducedBy
-//     });
-//     await newPatient.save();
-//     res.status(200).json({
-//       message: "مراجع با موفقیت ثبت نام شد!",
-//       userId: newPatient._id,
-//       username: newPatient.username,
-//       email: newPatient.email,
-//     });
-//   } catch (error) {
-//     if (!error.statusCode) {
-//       error.statusCode = 500;
-//     }
-//     next(error);
-//   }
-// }
-
-// export async function PatientLogin(req, res, next) {
-//   try {
-//     const errors = validationResult(req);
-
-//     if (!errors.isEmpty()) {
-//       const error = new Error("your entered data is invalid");
-//       error.statusCode = 422;
-//       next(error);
-//     }
-//     const { username, password } = req.body;
-
-//     const OnePatient = await patient.findOne({ username });
-
-//     if (!OnePatient) {
-//        const error = new Error("نام کاربری نامعتبر است.");
-//         error.statusCode = 401;
-//         return next(error);
-//     }
-
-//       const ComparePass = bcrypt.compare(password, OnePatient.password);
-//       if (!ComparePass) {
-//         const error = new Error("رمز عبور نامعتبر است.");
-//         error.statusCode = 401;
-//         return next(error);
-//       }
-//       const token = jwt.sign(
-//         { email: OnePatient.email, AdminId: OnePatient._id ,role: OnePatient.role},
-//         "amirmamad",
-//         { expiresIn: "1h" }
-//       );
-//       res.status(200).json({
-//         user: OnePatient,
-//         token: token,
-//       });
     
-//   } catch (error) {
-//     error.message = "your entered data is invalid";
-//     error.statusCode = 401;
-//     next(error);
-//   }
-// }
-
-// export async function TherapistSignUp(req, res, next) {
-//   try {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty) {
-//       const error = new Error("مقادیر ورودی نادرست است");
-//       error.statusCode = 422;
-//       error.data = errors.array();
-//       throw error;
-//     }
-
-//     const {
-//       username,
-//       firstName,
-//       lastName,
-//       phone,
-//       email,
-//       password,
-//       role,
-//       skills,
-//       availableHours,
-//       patients,
-//     } = req.body;
-
-//  const existUser = await therapist.findOne({
-//       $or: [{ username }, { email },{phone}],
-//     });
-
-//     if (existUser) {
-//       let message = "";
-//        if (existUser.username === username) {
-//         message = "نام کاربری قبلاً ثبت شده است!";
-//       } else if (existUser.email === email) {
-//         message = "ایمیل قبلاً ثبت شده است!";
-//       } else if (existUser.phone===phone) {
-//         message = "شماره تلفن قبلاً ثبت شده است!"
-//       }
-
-//       const error = new Error(message);
-//       error.statusCode = 409;
-//       return next(error);
-//     }
-
-
-//     const hashedPassword = await bcrypt.hash(password, 12);
-//     const newTherapist = new therapist({
-//       username,
-//       password: hashedPassword,
-//       firstName,
-//       lastName,
-//       email,
-//       phone,
-//       role,
-//       skills,
-//       patients,
-//       availableHours,
-//     });
-//     await newTherapist.save();
-//     res.status(200).json({
-//       message: "درمانگر با موفقیت ثبت نام شد!",
-//       userId: newTherapist._id,
-//       username: newTherapist.username,
-//       email: newTherapist.email,
-//     });
-//   } catch (error) {
-//     console.log(error);
-//     if (!error.statusCode) {
-//       error.statusCode = 500;
-//     }
-//     next(error);
-//   }
-// }
-
-// export async function TherapistLogin(req, res, next) {
-//   try {
-//     const errors = validationResult(req);
-
-//     if (!errors.isEmpty()) {
-//       const error = new Error("your entered data is invalid");
-//       error.statusCode = 422;
-//       next(error);
-//     }
-//     const { username, password } = req.body;
-
-//     const OneTherapist = await therapist.findOne({ username });
-//     if (OneTherapist) {
-//       const ComparePass = await bcrypt.compare(password, OneTherapist.password);
-//       if (!ComparePass) {
-//         const error = new Error("نام کاربری یا رمز عبور نامعتبر است.");
-//         error.statusCode = 401;
-//         return next(error);
-//       }
-//       const token = jwt.sign(
-//         { email: OneTherapist.email, AdminId: OneTherapist._id ,role: OneTherapist.role },
-//         "amirmamad",
-//         { expiresIn: "1h" }
-//       );
-//       res.status(200).json({
-//         user: OneTherapist,
-//         token: token,
-//       });
-//     } else {
-//       const error = new Error("نام کاربری یا رمز عبور نامعتبر است.");
-//       error.statusCode = 401;
-//       return next(error);
-//     }
-//   } catch (error) {
-//     error.message = "your entered data is invalid";
-//     error.statusCode = 401;
-//     next(error);
-//   }
-// }
+    const csrfToken = generateCsrfToken();
+    res.cookie("csrf_token", csrfToken, csrfCookieOptions);
+    return res.status(200).json({ csrfToken });
+  } catch (err) {
+    console.error("❌ Error in /auth/csrf:", err);
+    return res.status(500).json({ message: "Failed to generate CSRF token" });
+  }
+};

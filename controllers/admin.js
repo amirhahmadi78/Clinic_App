@@ -48,10 +48,13 @@ export async function daily(req,res,next) {
 
 export async function findTherapists(req, res, next) {
   try {
-    const { firstName,lastName, phone, percentDefault, role, skills } = req.query;
+    const { firstName,lastName, phone, percentDefault, role, skills,id } = req.query;
     let query = {};
     if (role) {
       query.role = role;
+    }
+     if (id) {
+      query.id = id;
     }
     if (skills) {
       query.skills = { $in: skills };
@@ -133,7 +136,7 @@ export async function DailyScheduleOfTherapist(req, res, next) {
 
 export async function adminChangeStatusAndMakefinance(req, res, next) {
   try {
-    const userId = req.userId || "68cbcac51a2aa06e0e151dd4"; //felan;
+    const userId = req.user.id || "68cbcac51a2aa06e0e151dd4"; //felan;
     const { appointmentId, status_clinic } = req.body;
     if (!status_clinic || !appointmentId) {
       const error = new Error("مقادیر وارد شده نادرست است");

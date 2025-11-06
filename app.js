@@ -1,3 +1,4 @@
+console.log("avval");
 
 import express from "express";
 import mongoose from "mongoose";
@@ -19,14 +20,17 @@ const app = express();
 const PORT = process.env.PORT || 8642;
 const DB_URI = process.env.MONGO_URI||"mongodb://localhost:27017/clinic_app";
 
+console.log("ghablesh");
 
 // اگر فرانت روی دامنه/پورت دیگر است:
 app.use(cors({
-  origin: "http://194.180.11.197",// یا دامنه فرانت
+  origin: "http://localhost:5173",// یا دامنه فرانت
+// http://194.180.11.197/
+
   credentials: true,
 }));
 
-
+console.log("baadesh");
 
 
 app.use((req, res, next) => {
@@ -44,11 +48,11 @@ app.use(cookieParser());
 
 
 
-
+app.use(authRoute);
 import { csrfGuard } from "./middlewares/auth.js";
 app.use(csrfGuard);
 
-app.use(authRoute);
+
 app.use(therapistRoute)
 app.use(adminRoute)
 app.use(appointmentRoute)
@@ -69,7 +73,7 @@ app.use((error, req, res, next) => {
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(DB_URI, {
+    await mongoose.connect("mongodb://localhost:27017/clinic_app", {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
