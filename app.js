@@ -24,9 +24,9 @@ console.log("ghablesh");
 
 // اگر فرانت روی دامنه/پورت دیگر است:
 app.use(cors({
-  origin: "http://localhost:5173",// یا دامنه فرانت
-// http://194.180.11.197/
-
+  origin: "http://194.180.11.197/",// یا دامنه فرانت
+// 
+// http://localhost:5173
   credentials: true,
 }));
 
@@ -73,7 +73,7 @@ app.use((error, req, res, next) => {
 
 const connectDB = async () => {
   try {
-    await mongoose.connect("mongodb://localhost:27017/clinic_app", {
+    await mongoose.connect(DB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
