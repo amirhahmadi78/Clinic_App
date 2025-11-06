@@ -24,7 +24,7 @@ console.log("ghablesh");
 
 // اگر فرانت روی دامنه/پورت دیگر است:
 app.use(cors({
-  origin: "http://194.180.11.197/",// یا دامنه فرانت
+  origin: "http://194.180.11.197",// یا دامنه فرانت
 // 
 // http://localhost:5173
   credentials: true,
