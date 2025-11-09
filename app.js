@@ -18,16 +18,16 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 const PORT = process.env.PORT || 8642;
-const DB_URI = process.env.MONGO_URI||"mongodb://localhost:27017/clinic_app";
+const DB_URI = "mongodb://localhost:27017/clinic_app";
 
 console.log("ghablesh");
 
 // اگر فرانت روی دامنه/پورت دیگر است:
 app.use(cors({
-  origin: "http://194.180.11.197",// یا دامنه فرانت
-// 
-// http://localhost:5173
-  credentials: true,
+  origin: "http://localhost:5173" , 
+//  "http://194.180.11.197"
+
+  credentials: true
 }));
 
 console.log("baadesh");

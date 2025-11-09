@@ -19,6 +19,7 @@ import { FindTherapist } from "../services/therapistService.js";
 import { GetPatients ,PatientDetails} from "../services/patientServise.js";
 import LeaveRequest from "../models/LeaveRequest.js";
 import moment from "moment-jalaali";
+import { DeleteAtChangeStatus } from "../services/appointment.js";
 
 
 export async function daily(req,res,next) {
@@ -136,7 +137,7 @@ export async function DailyScheduleOfTherapist(req, res, next) {
 
 export async function adminChangeStatusAndMakefinance(req, res, next) {
   try {
-    const userId = req.user.id || "68cbcac51a2aa06e0e151dd4"; //felan;
+    const userId = req.user.id 
     const { appointmentId, status_clinic } = req.body;
     if (!status_clinic || !appointmentId) {
       const error = new Error("مقادیر وارد شده نادرست است");
@@ -152,36 +153,10 @@ export async function adminChangeStatusAndMakefinance(req, res, next) {
 
     OneAppointment.status_clinic = status_clinic;
 
-    if (
-      (status_clinic === "completed-notpaid" ||
-        status_clinic === "completed-paid" ||
-        status_clinic === "bimeh") &&
-      OneAppointment.status_therapist === "completed"
-    ) {
-      const isFinancial = await financial.findOne({
-        appointmentId: appointmentId,
-      });
-      if (isFinancial) {
-        const error = new Error(
-          "امور مالی مربوط به ویزیت مورد نظر ثبت شده می باشد"
-        );
-        error.statusCode = 404;
-        return next(error);
-      } else {
-        const payment = status_clinic;
-        const [resultFinancial, updatedAppointment] = await Promise.all([
-          addFinancial(appointmentId, userId, payment),
-          OneAppointment.save(),
-        ]);
-
-        res.status(201).json({
-          message: "وضعیت ویزیت تغییر و تراکنش مالی ثبت گردید",
-          resultFinancial,
-          updatedAppointment,
-        });
-      }
-    } else {
-      const updateAppointment = await OneAppointment.save();
+        if (status_clinic=="canceled"||status_clinic=="scheduled"){
+      await DeleteAtChangeStatus(appointmentId)
+      
+        const updateAppointment = await OneAppointment.save();
       res.status(201).json({
         message: "وضعیت ویزیت بروز رسانی شد",
         updateAppointment,
@@ -192,7 +167,55 @@ export async function adminChangeStatusAndMakefinance(req, res, next) {
         error.statusCode = 402;
         return next(error);
       }
+
     }
+
+
+
+    if (
+      (status_clinic === "completed-notpaid" ||
+        status_clinic === "completed-paid" ||
+        status_clinic === "bimeh") &&
+      OneAppointment.status_therapist === "completed"
+    ) {
+      const isFinancial = await financial.findOne({
+        appointmentId: appointmentId,
+      });
+      if (isFinancial) {
+      isFinancial.payment=status_clinic
+      const updateFinance=await isFinancial.save()
+      const updateAppoint=await OneAppointment.save()
+      res.status(201).json({
+          message: "وضعیت پرداخت تغییر کرد",
+          updateFinance,
+          updateAppoint
+        });
+      } else {
+        const payment = status_clinic;
+        const [resultFinancial, updatedAppointment] = await Promise.all([
+          addFinancial(appointmentId, userId, payment),
+         await OneAppointment.save(),
+        ]);
+
+        res.status(201).json({
+          message: "وضعیت ویزیت تغییر و تراکنش مالی ثبت گردید",
+          resultFinancial,
+          updatedAppointment,
+        });
+      }
+    }
+    if((status_clinic === "completed-notpaid" ||
+        status_clinic === "completed-paid" ||
+        status_clinic === "bimeh") &&
+      OneAppointment.status_therapist == "absect"||OneAppointment.status_therapist=="scheduled"){
+        const resault=await OneAppointment.save()
+         res.status(201).json({
+          message: "وضعیت ویزیت تغییر کرد",
+         resault
+        });
+      }
+    
+    
   } catch (error) {
     next(error);
   }
@@ -237,21 +260,26 @@ export async function GetAllFinancial(req, res, next) {
   try {
     const { startDay, endDay, payment } = req.query;
     if (!startDay || !endDay) {
-      const error = new Error("لطفا بازه ی زمانی مورد نظر را وارد کنید");
-      error.statusCode = 400;
-      return next(error);
-    }
-
-    let query = { localDay_visit: { $gte: startDay, $lte: endDay } };
+    const response = await FindAllFinancial({});
+    res.status(200).json(response);
+    }else{
+       let query = { localDay_visit: { $gte: startDay, $lte: endDay } };
     if (payment) {
       query.payment = { $in: payment };
     }
     const response = await FindAllFinancial(query);
     res.status(200).json(response);
+    }
+
+   
   } catch (error) {
     next(error);
   }
 }
+
+
+
+
 
 export async function GetmonthTherapistIncome(req, res, next) {
   try {

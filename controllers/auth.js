@@ -342,6 +342,8 @@ export async function PatientLogin(req, res, next) {
       modeluser: OnePatient.modeluser,
       firstName: OnePatient.firstName,
       lastName: OnePatient.lastName,
+      percentDefault:OnePatient.percentDefault
+      
     };
 
     const accessToken = signAccessToken(payload);
@@ -371,6 +373,7 @@ export async function PatientLogin(req, res, next) {
     next(e);
   }
 }
+
 
 
 

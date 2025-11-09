@@ -6,6 +6,8 @@ import therapist from "../models/therapist.js";
 import { addFinancial,dailyFinancialOfTherapist,monthFinancialOfTherapist } from "../services/financialservice.js";
 import {serviceDailyLeaveRequest,serviceHourlyLeaveRequest} from "../services/leaveRequestService.js"
 import LeaveRequest from "../models/LeaveRequest.js";
+import { DeleteAtChangeStatus } from "../services/appointment.js";
+import message from "../models/message.js";
 export async function ShowPatients(req, res, next) {
   try {
     const therapistId = req.userId || req.params.therapistId;
@@ -30,7 +32,7 @@ export async function ShowPatients(req, res, next) {
 
 export async function therapistChangeStatusAndMakefinance(req, res, next) {
   try {
-    const userId = req.userId || "68cbcac51a2aa06e0e151dd4"; //felan;
+    const userId = req.user.id 
     const { appointmentId, status_therapist } = req.body;
     if (!status_therapist || !appointmentId) {
       const error = new Error("مقادیر وارد شده نادرست است");
@@ -45,6 +47,18 @@ export async function therapistChangeStatusAndMakefinance(req, res, next) {
     }
 
     OneAppointment.status_therapist = status_therapist;
+
+    if(status_therapist=="scheduled"||status_therapist=="absent"){
+      DeleteAtChangeStatus(OneAppointment._id)
+      const UpdateAppoint=await OneAppointment.save()
+      res.status(201).json({
+        message:"تغییر با موفقیت انجام شد",
+        UpdateAppoint
+      })
+    }
+
+
+
 
     if (
       (OneAppointment.status_clinic === "completed-notpaid" ||
@@ -74,19 +88,7 @@ export async function therapistChangeStatusAndMakefinance(req, res, next) {
           updatedAppointment
         })
       }
-    } else {
-      const updateAppointment = await OneAppointment.save();
-      res.status(201).json({
-        message: "وضعیت ویزیت بروز رسانی شد",
-        updateAppointment,
-      });
-    
-      if (!updateAppointment) {
-        const error = new Error("بروز رسانی وضعیت ویزیت انجام نشد");
-        error.statusCode = 402;
-        return next(error);
-      }
-    }
+    } 
   } catch (error) {
     next(error);
   }
@@ -112,13 +114,14 @@ export async function GetdailyTherapistIncome(req,res,next){
 
 export async function GetmonthTherapistIncome(req,res,next){
   try {
-    const{therapistId,startDay,endDay}=req.query
+    const{startDay,endDay}=req.query
     
-    if (!endDay||!startDay||!therapistId){
+    if (!endDay||!startDay){
       const error = new Error("تاریخ یا تراپیست انتخاب نشده است");
       error.statusCode = 400;
       return next(error);
     }
+    const therapistId=req.user.id
     const response=await monthFinancialOfTherapist(therapistId,startDay,endDay)
     res.status(200).json({
       response

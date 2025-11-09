@@ -2,6 +2,7 @@ import Appointment from "../models/Appointment.js";
 import therapist from "../models/therapist.js";
 import patient from "../models/patient.js";
 import financial from "../models/financial.js";
+import message from "../models/message.js";
  
  export async function addFinancial(appointmentId,userId,payment ) {
     
@@ -129,9 +130,13 @@ export async function monthFinancialOfTherapist(therapistId,startDay,endDay){
       }
     });
   if (appointments.length===0){
-    const error=new Error("درمانگر در بازه مورد نظر ویزیت  ندارد")
-    error.statusCode=404
-    throw error
+    return({
+      message:"فاقد جلسه ی درمانی در بازه ی مورد نظر می باشد",
+       therapistIncome:0,
+    clinicIncome:0,
+    TotalFinancial:0,
+    reports:0,
+    })
   }
 
   const reports=await financial.find({therapistId,localDay_visit:{
@@ -144,9 +149,13 @@ export async function monthFinancialOfTherapist(therapistId,startDay,endDay){
   .select({"appointmentId":1,"patientFee":1,"therapistShare":1,"clinicShare":1});
 
   if (reports.length===0){
-    const error=new Error("درمانگر در بازه مورد نظر ویزیت ثبت شده نداشته است")
-    error.statusCode=404
-    throw error
+    return({
+      message:"هیچ تراکنش مالی برای درمانگر مورد نظر در این ماه مورد نظر ثبت نشده!",
+         therapistIncome:0,
+    clinicIncome:0,
+    TotalFinancial:0,
+    reports:0,
+    })
   }else{
     for (const Onereport of reports){
     therapistIncome+=Onereport.therapistShare
@@ -154,10 +163,7 @@ export async function monthFinancialOfTherapist(therapistId,startDay,endDay){
     TotalFinancial+=Onereport.patientFee
     }
  
-   
-  }
- 
-  return ({
+   return ({
     message:"تراکنش های مالی درمانگر در بازه مورد نظر به شرح زیر است",
     therapistIncome,
     clinicIncome,
@@ -165,6 +171,9 @@ export async function monthFinancialOfTherapist(therapistId,startDay,endDay){
     reports,
     
   })
+  }
+ 
+  
   } catch (error) {
     throw error;
     

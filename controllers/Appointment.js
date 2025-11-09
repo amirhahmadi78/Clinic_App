@@ -212,7 +212,7 @@ export async function AddDefAppointment(req, res, next) {
     // ۱. پیدا کردن درمانگر و روز کاری مربوطه
     const def_Appointments = await therapist.findOne(
       { _id: therapistId, "workDays.day": date },
-      { "workDays.$": 1 }
+      { "workDays.$": 1, firstName:1,lastName:1 }
     );
 
     // ۲. روزهای هفته و تاریخ‌های مرجع
@@ -241,11 +241,7 @@ export async function AddDefAppointment(req, res, next) {
     const startDT = DateTime.fromISO(startD, { zone: "Asia/Tehran" });
 console.log(date);
 
-    // if (!startDT.isValid) {
-    //   const error = new Error("زمان شروع نامعتبر است!");
-    //   error.statusCode = 400;
-    //   return next(error);
-    // }
+   
 
     const endDT = startDT.plus({ minutes: duration });
 
@@ -258,13 +254,28 @@ console.log(date);
     }
 
     // ۵. بررسی تداخل زمانی
-    if (def_Appointments && def_Appointments.workDays.length !== 0) {
-      def_Appointments.workDays.map((one) => {
-        const otherStart = one.start;
-        const otherEnd = one.end;
-        ConflictRole(startDT, endDT, otherStart, otherEnd);
-      });
-    }
+   if (def_Appointments && def_Appointments.workDays.length !== 0) {
+  // پیدا کردن workDay مربوط به روز انتخابی
+  const targetDay = def_Appointments.workDays.find(wd => wd.day === date);
+  
+  if (targetDay && targetDay.defaultAppointments.length) {
+    targetDay.defaultAppointments.forEach(app => {
+      const otherStart = DateTime.fromJSDate(app.start, { zone: "Asia/Tehran" });
+      const otherEnd = DateTime.fromJSDate(app.end, { zone: "Asia/Tehran" });
+      ConflictRole(startDT, endDT, otherStart, otherEnd);
+    });
+  }
+
+
+  const targetday_patient=onePatient.workDays.find(wd=>wd.day===date)
+   if (targetday_patient && targetday_patient.defaultAppointments.length) {
+    targetday_patient.defaultAppointments.forEach(app => {
+      const otherStart = DateTime.fromJSDate(app.start, { zone: "Asia/Tehran" });
+      const otherEnd = DateTime.fromJSDate(app.end, { zone: "Asia/Tehran" });
+      ConflictRole(startDT, endDT, otherStart, otherEnd);
+    });
+  }
+}
 
     // ۶. افزودن نوبت ثابت
     const AddAdef_Appointment = await therapist.updateOne(
@@ -285,9 +296,28 @@ console.log(date);
       }
     );
 
+        const AddAdef_Appointment_Patient = await patient.updateOne(
+      { _id: onePatient._id, "workDays.day": date },
+      {
+        $push: {
+          "workDays.$.defaultAppointments": {
+            therapistId:def_Appointments._id,
+            therapistName: `${def_Appointments.firstName} ${def_Appointments.lastName}`,
+            start: startDT.toISO(), // ذخیره به فرمت استاندارد ISO
+            end: endDT.toISO(),
+            day:date,
+            duration,
+            note,
+            expiresAt,
+          },
+        },
+      }
+    );
+
     res.status(200).json({
       message: "افزودن به برنامه ثابت انجام شد",
       result: AddAdef_Appointment,
+      AddAdef_Appointment_Patient
     });
 
   } catch (error) {
