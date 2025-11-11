@@ -20,6 +20,8 @@ import { GetPatients ,PatientDetails} from "../services/patientServise.js";
 import LeaveRequest from "../models/LeaveRequest.js";
 import moment from "moment-jalaali";
 import { DeleteAtChangeStatus } from "../services/appointment.js";
+import salary from "../models/salary.js";
+import message from "../models/message.js";
 
 
 export async function daily(req,res,next) {
@@ -668,7 +670,7 @@ export async function DeletePatient(req,res,next) {
 }
 
 
-export default async function TherapistAtDay(req,res,next){
+export  async function TherapistAtDay(req,res,next){
 try {
   const { date } = req.query;
   const dayOfWeek = moment(date, "YYYY-MM-DD").format("dddd");
@@ -747,4 +749,68 @@ if(therapistId==1){
 
 
 
+}
+
+
+export async function AddSalary(req,res,next) {
+  console.log(req.body);
+  
+  const{type,payAt,ATModel,YYYYMM,fee,payment,coderahgiri,note}=req.body
+  if (!type|| !payAt||!ATModel|| !YYYYMM|| !fee|| !payment|| !coderahgiri){
+     return next(new Error("مقادیر وارد شده نادرست است",{
+      statusCode:401
+    }))
+    }
+    const payBy={
+      
+      userId:req.user.id,
+      fullName:req.user.firstName+" "+req.user.lastName
+    
+    }
+    
+  const query={
+    ATModel,
+    type,
+    payBy,
+    BYModel:req.user.modeluser,
+    payAt,
+    YYYYMM,
+    fee,
+    payment,
+    coderahgiri,
+    note:note||""
+  }
+  try {
+      const newSalary= new salary(query)
+
+      await newSalary.save()
+      res.status(201).json({newSalary,
+          message:"فیش واریزی شما با موفقیت در لیست حقوق ها ثبت شد"
+      })
+
+  } catch (error) {
+      next(error)
+  }
+} 
+
+export async function GEtMonthSalary(req,res,next) {
+  try {
+    
+    
+    const {YYYYMM}=req.query
+    if(!YYYYMM){
+      return new Error("لطفا یک ماه را برای بررسی فبش ها انتخاب کنید",{
+        statusCode:401
+      })
+    }
+  
+    const transactions=await salary.find({YYYYMM})
+      res.status(200).json({
+        message:"لیست تراکنش ها",
+        transactions
+      })
+  } catch (error) {
+    next(error)
+  }
+  
 }

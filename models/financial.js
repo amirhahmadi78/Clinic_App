@@ -33,7 +33,14 @@ const financialSchema = new Schema({
   },
   userId:{
      type: Schema.Types.ObjectId, ref: "admin", required: true
-  } 
+  } ,
+  payToTherapist:{
+    type:Boolean,
+    required:true,
+    default:false
+  },
+  paidAt: { type: Date }
+
 },{
     timestamps:true
 });

@@ -146,7 +146,7 @@ export async function monthFinancialOfTherapist(therapistId,startDay,endDay){
     { path: "patientId", select: "firstName lastName" },
     { path: "appointmentId", select: "duration status_clinic status_therapist localDay" }
   ])
-  .select({"appointmentId":1,"patientFee":1,"therapistShare":1,"clinicShare":1});
+  .select({"appointmentId":1,"patientFee":1,"therapistShare":1,"clinicShare":1,"localDay_visit":1,"patientName":1});
 
   if (reports.length===0){
     return({
@@ -220,9 +220,19 @@ export async function FindPatientFinance(query){
     select:["firstName","lastName","status_clinic","status_therapist"]
   })
   if (financialList.length===0){
-    const error=new Error("تراکنشی با فیلتر های شما یافت نشد!")
-    error.statusCode=404
-    throw error
+    return{
+      message:"داده های مورد نظر شما",
+    TotalFinancial:0,
+    TotalComplete:0,
+    TotalNotComplete:0,
+    TotalTherapistShare,
+    TotalClinicShare:0,
+    Totalbimeh:0,
+    TotalApointment:0,
+    
+    financialList:[]
+    }
+    
   }
   for(const Onefinancial of financialList){
     TotalFinancial+=Onefinancial.patientFee
