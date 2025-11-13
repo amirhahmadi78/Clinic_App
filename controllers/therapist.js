@@ -58,7 +58,12 @@ export async function therapistChangeStatusAndMakefinance(req, res, next) {
     }
 
 
-
+if (status_therapist=="completed"&&(OneAppointment.status_clinic=="scheduled"||OneAppointment.status_clinic=="canceled")){
+  await OneAppointment.save()
+  res.status(201).json({
+    message:"وضعیت مراجع با موفقیت تغییر کرد!"
+  })
+}
 
     if (
       (OneAppointment.status_clinic === "completed-notpaid" ||

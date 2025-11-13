@@ -1,6 +1,6 @@
 import express from "express";
 
-import  { TherapistAtDay,findTherapists,AddPatientToTherapist,GetPatientDetails,adminChangeStatusAndMakefinance,GetAllFinancial,GetPatientsList, GetFindLeaveRequests,GetmonthTherapistIncome, GetPatientFinance, MakeTherapist, EditTherapist, DeleteTherapist, MakePatient, EditPatient, DeletePatient, RelateTherapist_Patient, AddSalary, GEtMonthSalary} from "../controllers/admin.js";
+import  { TherapistAtDay,findTherapists,AddPatientToTherapist,GetPatientDetails,adminChangeStatusAndMakefinance,GetAllFinancial,GetPatientsList, GetFindLeaveRequests,GetmonthTherapistIncome, GetPatientFinance, MakeTherapist, EditTherapist, DeleteTherapist, MakePatient, EditPatient, DeletePatient, RelateTherapist_Patient, AddSalary, GEtMonthSalary, GetUnprocessedAppointments, GetAvailaibleTime} from "../controllers/admin.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
 
 const router = express.Router();
@@ -44,4 +44,9 @@ router.post("/admin/relate",csrfGuard,requireAuth,RelateTherapist_Patient)
 router.post("/admin/addsalary",csrfGuard,requireAuth,AddSalary)
 
 router.get("/admin/monthsalary",csrfGuard,requireAuth,GEtMonthSalary)
+
+router.get("/admin/unprocessedappointments",csrfGuard,requireAuth,GetUnprocessedAppointments)
+
+router.get("/admin/availabletime",csrfGuard,requireAuth,GetAvailaibleTime)
+
 export default router

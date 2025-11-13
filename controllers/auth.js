@@ -55,7 +55,7 @@ export async function AdminSignUp(req, res, next) {
       
       const error = new Error(message);
       error.statusCode = 409;
-      console.log(error);
+
       return next(error);
     }
 
@@ -156,7 +156,7 @@ export async function AdminLogin(req, res, next) {
 
 export async function RefreshSession(req, res) {
   try {
-    console.log("omaadrefresh");
+
     
     const rToken = req.cookies?.refresh_token;
     if (!rToken) return res.status(401).json({ message: "No refresh token" });
@@ -273,7 +273,7 @@ export async function PatientSignUp(req, res, next) {
       
       const error = new Error(message);
       error.statusCode = 409;
-      console.log(error);
+
       return next(error);
     }
 
@@ -439,7 +439,7 @@ export async function TherapistSignUp(req, res, next) {
       
       const error = new Error(message);
       error.statusCode = 409;
-      console.log(error);
+
       return next(error);
     }
 

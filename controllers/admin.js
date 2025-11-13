@@ -24,6 +24,7 @@ import salary from "../models/salary.js";
 import message from "../models/message.js";
 
 
+
 export async function daily(req,res,next) {
   try {
     const localDay=req.params.localDay
@@ -163,7 +164,7 @@ export async function adminChangeStatusAndMakefinance(req, res, next) {
         message: "وضعیت ویزیت بروز رسانی شد",
         updateAppointment,
       });
-      console.log("just Updated: ", updateAppointment);
+   
       if (!updateAppointment) {
         const error = new Error("بروز رسانی وضعیت ویزیت انجام نشد");
         error.statusCode = 402;
@@ -393,7 +394,7 @@ export async function MakeTherapist(req,res,next) {
           
           const error = new Error(message);
           error.statusCode = 409;
-          console.log(error);
+      
           return next(error);
         }
         
@@ -469,7 +470,7 @@ export async function EditTherapist(req,res,next) {
           
         //   const error = new Error(message);
         //   error.statusCode = 409;
-        //   console.log(error);
+     
         //   return next(error);
         // }
         
@@ -506,7 +507,7 @@ export async function EditTherapist(req,res,next) {
 export async function DeleteTherapist(req,res,next) {
   try {
     const id=req.body.id
-console.log(id);
+
 
     const resault=await therapist.findByIdAndDelete(id)
     if(!resault){
@@ -543,7 +544,7 @@ export async function MakePatient(req,res,next) {
           
           const error = new Error(message);
           error.statusCode = 409;
-          console.log(error);
+
           return next(error);
         }
         
@@ -616,7 +617,7 @@ export async function EditPatient(req,res,next) {
           
         //   const error = new Error(message);
         //   error.statusCode = 409;
-        //   console.log(error);
+      
         //   return next(error);
         // }
         
@@ -718,7 +719,7 @@ try {
 
 export  async function RelateTherapist_Patient(req,res,next){
 try {
-    console.log(req.body);
+
   const {therapistId,patientId}=req.body
 
   
@@ -729,7 +730,7 @@ if (patientId==1){
       statusCode:404
     }))
   }
-  console.log(OneTherapist);
+
   
   res.status(200).json(OneTherapist)
 }
@@ -753,10 +754,10 @@ if(therapistId==1){
 
 
 export async function AddSalary(req,res,next) {
-  console.log(req.body);
+ 
   
-  const{type,payAt,ATModel,YYYYMM,fee,payment,coderahgiri,note}=req.body
-  if (!type|| !payAt||!ATModel|| !YYYYMM|| !fee|| !payment|| !coderahgiri){
+  const{type,payAt,ATModel,YYYYMM,fee,payment,coderahgiri,note,payDate}=req.body
+  if (!type|| !payAt||!ATModel|| !YYYYMM|| !fee|| !payment|| !coderahgiri||!payDate){
      return next(new Error("مقادیر وارد شده نادرست است",{
       statusCode:401
     }))
@@ -775,6 +776,7 @@ export async function AddSalary(req,res,next) {
     BYModel:req.user.modeluser,
     payAt,
     YYYYMM,
+    payDate,
     fee,
     payment,
     coderahgiri,
@@ -813,4 +815,55 @@ export async function GEtMonthSalary(req,res,next) {
     next(error)
   }
   
+}
+
+
+
+
+export async function GetUnprocessedAppointments(req, res, next) {
+  try {
+    const appointments1 = await appointment.find({
+      $and: [
+        { status_clinic: { $in: ["canceled", "scheduled"] } },
+        { status_therapist: "completed" }
+      ]
+    });
+
+    const appointments2 = await appointment.find({
+      $and: [
+        { status_clinic: { $in: ["completed-notpaid", "completed-paid", "bimeh"] } },
+        { status_therapist: { $in: ["absent", "scheduled"] } }
+      ]
+    });
+
+    const AllAppointments = [...appointments1, ...appointments2];
+
+    res.status(200).json(AllAppointments);
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+export async function GetAvailaibleTime(req,res,next){
+  try {
+    const{therapistId}=req.query
+    if(!therapistId){
+      return new Error("لطفا درمانگر را انتخاب کنید",{
+        statusCode:402
+      })
+    }
+    const Onetherapist=await therapist.findById(therapistId)
+ if(!Onetherapist){
+      return new Error("درمانگر مورد نظر یافت نشد!",{
+        statusCode:402
+      })
+    }
+
+    const availableTime=Onetherapist.workDays
+    res.status(200).json({availableTime})
+  } catch (error) {
+    next(error)
+  }
 }

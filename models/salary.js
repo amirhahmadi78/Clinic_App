@@ -26,6 +26,10 @@ const salarySchema = new Schema(
       },
       fullName: { type: String, required: true },
     },
+    payDate:{
+      type:String,
+      required:true
+    },
     ATModel: {
       type: String,
       required: true,
