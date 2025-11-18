@@ -29,7 +29,7 @@ const def_Appointment = new mongoose.Schema({
 });
 
 const workDaySchema = new mongoose.Schema({
-  day: {
+ day: {
     type: String,
     enum: [
       "Saturday",
@@ -42,6 +42,8 @@ const workDaySchema = new mongoose.Schema({
     ],
     required: true,
   },
+  startTime: { type: String, required: true },
+  endTime: { type: String, required: true },
   defaultAppointments: [def_Appointment],
 });
 
@@ -92,15 +94,15 @@ const PatientSchema = new Schema(
     },
     workDays: {
       type: [workDaySchema],
-      default: [
-        { day: "Saturday", defaultAppointments: [] },
-        { day: "Sunday", defaultAppointments: [] },
-        { day: "Monday", defaultAppointments: [] },
-        { day: "Tuesday", defaultAppointments: [] },
-        { day: "Wednesday", defaultAppointments: [] },
-        { day: "Thursday", defaultAppointments: [] },
-        { day: "Friday", defaultAppointments: [] },
-      ],
+      // default: [
+      //   { day: "Saturday", defaultAppointments: [] },
+      //   { day: "Sunday", defaultAppointments: [] },
+      //   { day: "Monday", defaultAppointments: [] },
+      //   { day: "Tuesday", defaultAppointments: [] },
+      //   { day: "Wednesday", defaultAppointments: [] },
+      //   { day: "Thursday", defaultAppointments: [] },
+      //   { day: "Friday", defaultAppointments: [] },
+      // ],
     },
     introducedBy: { type: mongoose.Schema.Types.ObjectId, ref: "therapist" },
     refreshTokens: {

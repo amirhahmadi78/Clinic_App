@@ -21,7 +21,7 @@ import LeaveRequest from "../models/LeaveRequest.js";
 import moment from "moment-jalaali";
 import { DeleteAtChangeStatus } from "../services/appointment.js";
 import salary from "../models/salary.js";
-import message from "../models/message.js";
+
 
 
 
@@ -349,7 +349,7 @@ export async function GetPatientsList(req,res,next){
       query.phone = phone;
     }
   
-    const patientList = await GetPatients(query);
+    const patientList = await GetPatients(query)
     res.status(200).json(patientList);
     
   } catch (error) {
@@ -511,7 +511,7 @@ export async function DeleteTherapist(req,res,next) {
 
     const resault=await therapist.findByIdAndDelete(id)
     if(!resault){
-      return new Error()
+      return next( new Error())
     }
     res.status(201).json({
       message:"درمانگر با موفقیت حذف شد"
@@ -526,7 +526,7 @@ export async function DeleteTherapist(req,res,next) {
 export async function MakePatient(req,res,next) {
   try {
     
-        const { firstName,lastName, phone, paymentType ,discountPercent,address,introducedBy} = req.body;
+        const { firstName,lastName, phone, paymentType ,discountPercent,address,workDays,introducedBy} = req.body;
     const username=phone
         const existUser = await patient.findOne({
           $or: [{ username }, {phone}],
@@ -548,6 +548,7 @@ export async function MakePatient(req,res,next) {
           return next(error);
         }
         
+ 
         const password="123456"
         const hashedPassword = await bcrypt.hash(password, 12);
         const newPatient = new patient({
@@ -560,9 +561,12 @@ export async function MakePatient(req,res,next) {
           discountPercent,
           address,
           phone,
-          // introducedBy,
+          workDays,
+    
         });
-
+if (introducedBy) {
+  newPatient.introducedBy = introducedBy;
+}
         await newPatient.save();
         res.status(200).json({
               message: "درمانگر با موفقیت ثبت نام شد!"
@@ -579,8 +583,9 @@ export async function MakePatient(req,res,next) {
 
 export async function EditPatient(req,res,next) {
   try {
+    console.log(req.body);
     
-       const { OldPatient,firstName,lastName, phone, paymentType ,discountPercent,address,introducedBy} = req.body;
+       const { OldPatient,firstName,lastName, phone, paymentType ,discountPercent,address,introducedBy,workDays} = req.body;
     const username=phone
 
       const IsTherapist=await patient.findById(OldPatient._id)
@@ -590,12 +595,12 @@ export async function EditPatient(req,res,next) {
           return next(error);
       }
     const UpdateResault= await patient.findByIdAndUpdate(OldPatient._id,{
-        modeluser:"therapist",
+        modeluser:"patient",
           username,
           firstName,
           lastName,
           paymentType,
-          // introducedBy,
+          workDays,
           discountPercent,
           phone,
           address,
@@ -658,7 +663,7 @@ export async function DeletePatient(req,res,next) {
 
     const resault=await patient.findByIdAndDelete(id)
     if(!resault){
-      return new Error()
+      return next(new Error())
     }
     res.status(201).json({
       message:"مراجع با موفقیت حذف شد"
@@ -801,9 +806,9 @@ export async function GEtMonthSalary(req,res,next) {
     
     const {YYYYMM}=req.query
     if(!YYYYMM){
-      return new Error("لطفا یک ماه را برای بررسی فبش ها انتخاب کنید",{
+      return next(new Error("لطفا یک ماه را برای بررسی فبش ها انتخاب کنید",{
         statusCode:401
-      })
+      }))
     }
   
     const transactions=await salary.find({YYYYMM})
@@ -850,15 +855,15 @@ export async function GetAvailaibleTime(req,res,next){
   try {
     const{therapistId}=req.query
     if(!therapistId){
-      return new Error("لطفا درمانگر را انتخاب کنید",{
+      return next(new Error("لطفا درمانگر را انتخاب کنید",{
         statusCode:402
-      })
+      }))
     }
     const Onetherapist=await therapist.findById(therapistId)
  if(!Onetherapist){
-      return new Error("درمانگر مورد نظر یافت نشد!",{
+      return next(new Error("درمانگر مورد نظر یافت نشد!",{
         statusCode:402
-      })
+      }))
     }
 
     const availableTime=Onetherapist.workDays
@@ -867,3 +872,37 @@ export async function GetAvailaibleTime(req,res,next){
     next(error)
   }
 }
+
+
+export async function CheckPatient(req,res,next){
+  try {
+    const{patientId}=req.query
+    if (!patientId){
+      return next(new Error("لطفا اول درمانگر را انتخاب کنید",{
+        statusCode:401
+      }))
+    }
+
+let cancel=[]
+    const All=await appointment.find({
+      patientId
+    })
+
+  All.map(item=>{
+  
+
+    if (item.status_clinic=="canceled"){
+      cancel.push(item)
+    }
+  })
+    
+
+const CancelPercent=cancel.length/All.length *100
+
+    res.status(201).json({cancel,CancelPercent})
+  } catch (error) {
+    next(error)
+  }
+}
+
+

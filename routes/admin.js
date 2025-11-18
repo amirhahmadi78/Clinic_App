@@ -1,6 +1,6 @@
 import express from "express";
 
-import  { TherapistAtDay,findTherapists,AddPatientToTherapist,GetPatientDetails,adminChangeStatusAndMakefinance,GetAllFinancial,GetPatientsList, GetFindLeaveRequests,GetmonthTherapistIncome, GetPatientFinance, MakeTherapist, EditTherapist, DeleteTherapist, MakePatient, EditPatient, DeletePatient, RelateTherapist_Patient, AddSalary, GEtMonthSalary, GetUnprocessedAppointments, GetAvailaibleTime} from "../controllers/admin.js";
+import  { TherapistAtDay,findTherapists,AddPatientToTherapist,GetPatientDetails,adminChangeStatusAndMakefinance,GetAllFinancial,GetPatientsList, GetFindLeaveRequests,GetmonthTherapistIncome, GetPatientFinance, MakeTherapist, EditTherapist, DeleteTherapist, MakePatient, EditPatient, DeletePatient, RelateTherapist_Patient, AddSalary, GEtMonthSalary, GetUnprocessedAppointments, GetAvailaibleTime, CheckPatient} from "../controllers/admin.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
 
 const router = express.Router();
@@ -49,4 +49,5 @@ router.get("/admin/unprocessedappointments",csrfGuard,requireAuth,GetUnprocessed
 
 router.get("/admin/availabletime",csrfGuard,requireAuth,GetAvailaibleTime)
 
+router.get("/admin/checkpatient",csrfGuard,requireAuth,CheckPatient)
 export default router

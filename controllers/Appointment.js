@@ -11,7 +11,6 @@ export async function AddAppointment(req, res, next) {
     const {
       therapistId,
       patientId,
-      // localDay,
       start,
       duration,
       type,
@@ -178,6 +177,7 @@ export async function DailySchedule(req, res, next) {
   try {
     let { date } = req.query;
 
+
     if (!date) {
       const error = new Error("   تاریخ الزامی هستند");
       error.statusCode = 400;
@@ -187,12 +187,12 @@ export async function DailySchedule(req, res, next) {
     const dt = DateTime.fromISO(date, { zone: "Asia/Tehran" });
     const localDay = dt.toFormat("yyyy-MM-dd");
     
-    console.log("localDay:", localDay);
+    
 
     const appointments = await Appointment.find({
       localDay,
     });
-    console.log(appointments);
+ 
 
     // if (appointments.length==0){
     //   const error = new Error("برنامه در این تاریخ خالی می باشد");
@@ -336,5 +336,87 @@ export async function GetDailyDef(req, res, next) {
     res.status(200).json(Daytherapists);
   } catch (error) {
     next(error);
+  }
+}
+
+
+
+export async function EditAppointmen(req,res,next){
+  try {
+
+
+ const {appointmentId,
+      therapistId,
+      patientId,
+      start,
+      duration,
+      type,
+      status,
+      room,
+      notes,
+      patientFee,
+    } = req.body.payload;
+
+ 
+    
+   if(!appointmentId){
+    return next(new Error("لطفا اول جلسه ی را نتخاب نمایید",{
+      statusCode:401
+    }))
+
+   }
+const Truetherapist=await therapist.findById(therapistId)
+const Truepatient=await patient.findById(patientId)
+    const startDT = DateTime.fromISO(start, { zone: "Asia/Tehran" });
+    const endDT = startDT.plus({ minutes: duration });
+    const localDay = startDT.toFormat("yyyy-MM-dd");
+    const createdBy = req.user.Id 
+
+
+
+
+let therapistToday = await Appointment.find({
+  therapistId,
+  localDay,
+  _id: { $ne: appointmentId }   // یعنی جلسه فعلی را حذف کن
+});
+therapistToday.forEach(item=>{
+ const otherEnd=item.end
+ const otherStart=item.start
+ConflictRole(startDT, endDT, otherStart, otherEnd);
+})
+
+let patientToday = await Appointment.find({
+  patientId,
+  localDay,
+  _id: { $ne: appointmentId }
+});
+
+
+
+patientToday.forEach(item=>{
+ const otherEnd=item.end
+ const otherStart=item.start
+ConflictRole(startDT, endDT, otherStart, otherEnd);
+})
+
+   const result=await Appointment.findByIdAndUpdate(appointmentId,{
+    patientName:Truepatient.firstName+" "+Truepatient.lastName,
+    therapistName:Truetherapist.firstName+" "+Truetherapist.lastName,
+    therapistId,
+    patientId,
+    type,
+    room,
+    notes,
+    patientFee,
+    start:startDT,
+    end:endDT,
+    createdBy,
+    duration
+   })
+
+    res.status(201).json({result})
+  } catch (error) {
+    next(error)
   }
 }

@@ -3,7 +3,7 @@ import patient from "../models/patient.js";
 
 export async function GetPatients(query){
   try {
-      const patientList=await patient.find(query).populate("therapists","firstName lastName role")
+      const patientList=await patient.find(query).populate("therapists","firstName lastName role").populate("introducedBy", "firstName lastName")
    if(patientList.length===0){
     const error=new Error("مراجع پیدا نشد")
     error.statusCode=404

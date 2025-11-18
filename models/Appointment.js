@@ -29,7 +29,7 @@ const appointmentSchema = new Schema(
     },
     status_clinic: {
       type: String,
-      enum: ["scheduled","completed-notpaid", "completed-paid", "canceled", "bimeh"],
+      enum: ["scheduled","completed-notpaid", "completed-paid", "canceled", "bimeh","absent"],
       default: "scheduled",
     },
     status_therapist:{
