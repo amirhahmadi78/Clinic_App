@@ -1,5 +1,6 @@
 import Appointment from "../models/Appointment.js";
 import patient from "../models/patient.js";
+import therapist from "../models/therapist.js";
 
 export async function GetPatients(query){
   try {
@@ -40,3 +41,5 @@ export async function PatientDetails(patientId){
     throw error;
   }
 }
+
+

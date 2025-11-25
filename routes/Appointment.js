@@ -6,9 +6,10 @@ import {
   DailyScheduleOfPatient,
   deleteAppointment,
   DailySchedule,
-  AddDefAppointment,
+ 
   GetDailyDef,
   EditAppointmen,
+  PublishDailyFromDefPlan,
 } from "../controllers/Appointment.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
 
@@ -32,10 +33,12 @@ router.post("/appointment/delete", requireAuth, csrfGuard, deleteAppointment);
 
 router.get("/appointment/dailyschedule", requireAuth, csrfGuard, DailySchedule);
 
-router.post("/appointment/adddef", requireAuth, csrfGuard, AddDefAppointment);
+
 
 router.get("/appointment/dailydef", requireAuth, csrfGuard, GetDailyDef);
 
 router.post("/appointment/editappointment",requireAuth,csrfGuard,EditAppointmen);
+
+router.post("/appointment/publish",requireAuth,csrfGuard,PublishDailyFromDefPlan);
 
 export default router;

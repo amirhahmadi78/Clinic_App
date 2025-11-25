@@ -1,6 +1,6 @@
 import express from "express";
 
-import  { TherapistAtDay,findTherapists,AddPatientToTherapist,GetPatientDetails,adminChangeStatusAndMakefinance,GetAllFinancial,GetPatientsList, GetFindLeaveRequests,GetmonthTherapistIncome, GetPatientFinance, MakeTherapist, EditTherapist, DeleteTherapist, MakePatient, EditPatient, DeletePatient, RelateTherapist_Patient, AddSalary, GEtMonthSalary, GetUnprocessedAppointments, GetAvailaibleTime, CheckPatient} from "../controllers/admin.js";
+import  { TherapistAtDay,findTherapists,AddPatientToTherapist,GetPatientDetails,adminChangeStatusAndMakefinance,GetAllFinancial,GetPatientsList, GetFindLeaveRequests,GetmonthTherapistIncome, GetPatientFinance, MakeTherapist, EditTherapist, DeleteTherapist, MakePatient, EditPatient, DeletePatient, RelateTherapist_Patient, AddSalary, GEtMonthSalary, GetUnprocessedAppointments, GetAvailaibleTime, CheckPatient, RemovePatientToTherapist} from "../controllers/admin.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
 
 const router = express.Router();
@@ -10,6 +10,8 @@ const router = express.Router();
 router.get("/admin/findtherapists",requireAuth,csrfGuard,findTherapists)
 
 router.post("/admin/addpatienttotherapist",requireAuth,csrfGuard,AddPatientToTherapist)
+
+router.post("/admin/removepatienttotherapist",requireAuth,csrfGuard,RemovePatientToTherapist)
 
 router.post("/admin/changestatus",requireAuth,csrfGuard,adminChangeStatusAndMakefinance)
 
@@ -25,17 +27,17 @@ router.get("/admin/patients",requireAuth,csrfGuard,GetPatientsList)
 
 router.get("/admin/patientdetails/:patientId",requireAuth,csrfGuard,GetPatientDetails)
 
-router.post("/admin/addtherapist",requireAuth,csrfGuard,requireAuth,MakeTherapist)
+router.post("/admin/addtherapist",requireAuth,csrfGuard,MakeTherapist)
 
-router.post("/admin/edittherapist",requireAuth,csrfGuard,requireAuth,csrfGuard,EditTherapist)
+router.post("/admin/edittherapist",requireAuth,csrfGuard,EditTherapist)
 
-router.post("/admin/deletetherapist",requireAuth,csrfGuard,requireAuth,csrfGuard,DeleteTherapist)
+router.post("/admin/deletetherapist",requireAuth,csrfGuard,DeleteTherapist)
 
 router.post("/admin/addpatient",requireAuth,csrfGuard,requireAuth,MakePatient)
 
-router.post("/admin/editpatient",requireAuth,csrfGuard,requireAuth,csrfGuard,EditPatient)
+router.post("/admin/editpatient",requireAuth,csrfGuard,EditPatient)
 
-router.post("/admin/deletepatient",requireAuth,csrfGuard,requireAuth,csrfGuard,DeletePatient)
+router.post("/admin/deletepatient",requireAuth,csrfGuard,DeletePatient)
 
 router.get("/admin/therapistatday",requireAuth,csrfGuard,TherapistAtDay)
 

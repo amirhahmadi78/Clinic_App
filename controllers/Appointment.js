@@ -5,6 +5,7 @@ import therapist from "../models/therapist.js";
 import patient from "../models/patient.js";
 import financial from "../models/financial.js";
 import moment from "moment-jalaali";
+import { checkTherapistAvailability } from "../utils/Available-check.js";
 
 export async function AddAppointment(req, res, next) {
   try {
@@ -20,10 +21,12 @@ export async function AddAppointment(req, res, next) {
       patientFee,
     } = req.body;
 
+    console.log("START: ", start);
+
     const startDT = DateTime.fromISO(start, { zone: "Asia/Tehran" });
     const endDT = startDT.plus({ minutes: duration });
     const localDay = startDT.toFormat("yyyy-MM-dd");
-    const createdBy = req.user.Id || "68c6b48915700380ed73141d";
+    const createdBy = req.user.Id;
     const TherapistExist = await therapist.findById(therapistId);
     if (!TherapistExist) {
       const error = new Error("درمانگر مورد نظر وجود ندارد");
@@ -41,10 +44,10 @@ export async function AddAppointment(req, res, next) {
     const PatientAppointments = await Appointment.find(
       { patientId },
       "start end"
-    )
-    console.log("patiessssss"+PatientAppointments);
-    
-     for (let OneAppointment of PatientAppointments) {
+    );
+    console.log("patiessssss" + PatientAppointments);
+
+    for (let OneAppointment of PatientAppointments) {
       const otherStart = OneAppointment.start;
       const otherEnd = OneAppointment.end;
       ConflictRole(startDT, endDT, otherStart, otherEnd);
@@ -61,7 +64,17 @@ export async function AddAppointment(req, res, next) {
       ConflictRole(startDT, endDT, otherStart, otherEnd);
     }
 
-    
+    const { percentDefault, percentIntroduced } = TherapistExist;
+
+    const { introducedBy } = PatientExist;
+    let percent = percentDefault;
+    if (introducedBy && introducedBy.toString() == therapistId.toString()) {
+      percent = percentIntroduced;
+    } else {
+      percent = percentDefault;
+    }
+    const therapistShare = (patientFee * percent) / 100;
+    const clinicShare = patientFee - therapistShare;
 
     const MakeAppointment = new Appointment({
       therapistName: TherapistExist.firstName + " " + TherapistExist.lastName,
@@ -78,8 +91,20 @@ export async function AddAppointment(req, res, next) {
       createdBy,
       localDay,
       patientFee,
+      therapistShare,
+      clinicShare,
     });
-
+    const CheckAvailable = checkTherapistAvailability(
+      PatientExist,
+      startDT,
+      endDT,
+      TherapistExist
+    );
+    if (CheckAvailable.available == false) {
+      return next(new Error(CheckAvailable.error), {
+        statusCode: 402,
+      });
+    }
     const newAppointment = await MakeAppointment.save();
     res.status(200).json({
       newAppointment,
@@ -121,21 +146,21 @@ export async function deleteAppointment(req, res, next) {
 
 export async function DailyScheduleOfTherapist(req, res, next) {
   try {
-    let {  date } = req.query;
+    let { date } = req.query;
 
-    if ( !date) {
+    if (!date) {
       const error = new Error(" تاریخ الزامی می باشد!");
       error.statusCode = 400;
       return next(error);
     }
     date = date.trim();
-    date=moment(date, 'jYYYY-jMM-jDD').format('YYYY-MM-DD')
+    date = moment(date, "jYYYY-jMM-jDD").format("YYYY-MM-DD");
     const dt = DateTime.fromISO(date, { zone: "Asia/Tehran" });
     const localDay = dt.toFormat("yyyy-MM-dd");
-console.log("localDay",localDay);
+    console.log("localDay", localDay);
 
     const appointments = await Appointment.find({
-      therapistId:req.user.id,
+      therapistId: req.user.id,
       localDay,
     });
     if (appointments.length == 0) {
@@ -152,22 +177,23 @@ console.log("localDay",localDay);
 export async function DailyScheduleOfPatient(req, res, next) {
   try {
     let { date } = req.query;
-    if(!date){
-      return next(new Error("لطفا تاریخ را وارد کنید"))
+    if (!date) {
+      return next(new Error("لطفا تاریخ را وارد کنید"));
     }
     date = date.trim();
-    date=moment(date, 'jYYYY-jMM-jDD').format('YYYY-MM-DD')
+    date = moment(date, "jYYYY-jMM-jDD").format("YYYY-MM-DD");
     const dt = DateTime.fromISO(date, { zone: "Asia/Tehran" });
     const localDay = dt.toFormat("yyyy-MM-dd");
-    const appointments = await Appointment.find({ patientId:req.user.id, localDay });
+    const appointments = await Appointment.find({
+      patientId: req.user.id,
+      localDay,
+    });
     if (appointments.length == 0) {
       const error = new Error("برنامه ی مراجع در این تاریخ خالی می باشد");
       error.statusCode = 404;
       return next(error);
     }
-    res.status(200).json(
-      appointments
-    );
+    res.status(200).json(appointments);
   } catch (error) {
     next(error);
   }
@@ -177,7 +203,6 @@ export async function DailySchedule(req, res, next) {
   try {
     let { date } = req.query;
 
-
     if (!date) {
       const error = new Error("   تاریخ الزامی هستند");
       error.statusCode = 400;
@@ -186,13 +211,10 @@ export async function DailySchedule(req, res, next) {
     date = date.trim();
     const dt = DateTime.fromISO(date, { zone: "Asia/Tehran" });
     const localDay = dt.toFormat("yyyy-MM-dd");
-    
-    
 
     const appointments = await Appointment.find({
       localDay,
     });
- 
 
     // if (appointments.length==0){
     //   const error = new Error("برنامه در این تاریخ خالی می باشد");
@@ -205,133 +227,13 @@ export async function DailySchedule(req, res, next) {
   }
 }
 
-export async function AddDefAppointment(req, res, next) {
-  try {
-    const { therapistId, date, patientId, time, duration, expiresAt, note } = req.body;
-
-    // ۱. پیدا کردن درمانگر و روز کاری مربوطه
-    const def_Appointments = await therapist.findOne(
-      { _id: therapistId, "workDays.day": date },
-      { "workDays.$": 1, firstName:1,lastName:1 }
-    );
-
-    // ۲. روزهای هفته و تاریخ‌های مرجع
-    const dayToDate = {
-      Saturday: "2025-10-25",
-      Sunday: "2025-10-26",
-      Monday: "2025-10-27",
-      Tuesday: "2025-10-28",
-      Wednesday: "2025-10-29",
-      Thursday: "2025-10-30",
-      Friday: "2025-10-31",
-    };
-
-    const trueDay = dayToDate[date];
-    if (!trueDay) {
-      const error = new Error("روز هفته نامعتبر است!");
-      error.statusCode = 400;
-      return next(error);
-    }
-
-    // ۳. ساخت زمان شروع بر اساس منطقه زمانی ایران
-    const fulldate = `${trueDay} ${time}`;
-    const startD = DateTime.fromFormat(fulldate, "yyyy-MM-dd HH:mm", {
-      zone: "Asia/Tehran",
-    });
-    const startDT = DateTime.fromISO(startD, { zone: "Asia/Tehran" });
-console.log(date);
-
-   
-
-    const endDT = startDT.plus({ minutes: duration });
-
-    // ۴. بررسی وجود مراجع
-    const onePatient = await patient.findById(patientId);
-    if (!onePatient) {
-      const error = new Error("مراجع مورد نظر یافت نشد!");
-      error.statusCode = 404;
-      return next(error);
-    }
-
-    // ۵. بررسی تداخل زمانی
-   if (def_Appointments && def_Appointments.workDays.length !== 0) {
-  // پیدا کردن workDay مربوط به روز انتخابی
-  const targetDay = def_Appointments.workDays.find(wd => wd.day === date);
-  
-  if (targetDay && targetDay.defaultAppointments.length) {
-    targetDay.defaultAppointments.forEach(app => {
-      const otherStart = DateTime.fromJSDate(app.start, { zone: "Asia/Tehran" });
-      const otherEnd = DateTime.fromJSDate(app.end, { zone: "Asia/Tehran" });
-      ConflictRole(startDT, endDT, otherStart, otherEnd);
-    });
-  }
-
-
-  const targetday_patient=onePatient.workDays.find(wd=>wd.day===date)
-   if (targetday_patient && targetday_patient.defaultAppointments.length) {
-    targetday_patient.defaultAppointments.forEach(app => {
-      const otherStart = DateTime.fromJSDate(app.start, { zone: "Asia/Tehran" });
-      const otherEnd = DateTime.fromJSDate(app.end, { zone: "Asia/Tehran" });
-      ConflictRole(startDT, endDT, otherStart, otherEnd);
-    });
-  }
-}
-
-    // ۶. افزودن نوبت ثابت
-    const AddAdef_Appointment = await therapist.updateOne(
-      { _id: therapistId, "workDays.day": date },
-      {
-        $push: {
-          "workDays.$.defaultAppointments": {
-            patientId,
-            patientName: `${onePatient.firstName} ${onePatient.lastName}`,
-            start: startDT.toISO(), // ذخیره به فرمت استاندارد ISO
-            end: endDT.toISO(),
-            day:date,
-            duration,
-            note,
-            expiresAt,
-          },
-        },
-      }
-    );
-
-        const AddAdef_Appointment_Patient = await patient.updateOne(
-      { _id: onePatient._id, "workDays.day": date },
-      {
-        $push: {
-          "workDays.$.defaultAppointments": {
-            therapistId:def_Appointments._id,
-            therapistName: `${def_Appointments.firstName} ${def_Appointments.lastName}`,
-            start: startDT.toISO(), // ذخیره به فرمت استاندارد ISO
-            end: endDT.toISO(),
-            day:date,
-            duration,
-            note,
-            expiresAt,
-          },
-        },
-      }
-    );
-
-    res.status(200).json({
-      message: "افزودن به برنامه ثابت انجام شد",
-      result: AddAdef_Appointment,
-      AddAdef_Appointment_Patient
-    });
-
-  } catch (error) {
-    next(error);
-  }
-}
-
 export async function GetDailyDef(req, res, next) {
   try {
     const { day } = req.query;
 
     const Daytherapists = await therapist.find({ "workDays.day": day });
-    if(Daytherapists.length==0){
-      return res.status(200).json({message:"فاقد درمانگر در روز مورد نظر"})
+    if (Daytherapists.length == 0) {
+      return res.status(200).json({ message: "فاقد درمانگر در روز مورد نظر" });
     }
     res.status(200).json(Daytherapists);
   } catch (error) {
@@ -339,13 +241,10 @@ export async function GetDailyDef(req, res, next) {
   }
 }
 
-
-
-export async function EditAppointmen(req,res,next){
+export async function EditAppointmen(req, res, next) {
   try {
-
-
- const {appointmentId,
+    const {
+      appointmentId,
       therapistId,
       patientId,
       start,
@@ -357,66 +256,129 @@ export async function EditAppointmen(req,res,next){
       patientFee,
     } = req.body.payload;
 
- 
-    
-   if(!appointmentId){
-    return next(new Error("لطفا اول جلسه ی را نتخاب نمایید",{
-      statusCode:401
-    }))
+    if (!appointmentId) {
+      return next(
+        new Error("لطفا اول جلسه ی را نتخاب نمایید", {
+          statusCode: 401,
+        })
+      );
+    }
 
-   }
-const Truetherapist=await therapist.findById(therapistId)
-const Truepatient=await patient.findById(patientId)
+    const Truetherapist = await therapist.findById(therapistId);
+    const Truepatient = await patient.findById(patientId);
     const startDT = DateTime.fromISO(start, { zone: "Asia/Tehran" });
     const endDT = startDT.plus({ minutes: duration });
     const localDay = startDT.toFormat("yyyy-MM-dd");
-    const createdBy = req.user.Id 
+    const createdBy = req.user.Id;
 
+    let therapistToday = await Appointment.find({
+      therapistId,
+      localDay,
+      _id: { $ne: appointmentId }, // یعنی جلسه فعلی را حذف کن
+    });
+    therapistToday.forEach((item) => {
+      const otherEnd = item.end;
+      const otherStart = item.start;
+      ConflictRole(startDT, endDT, otherStart, otherEnd);
+    });
 
+    let patientToday = await Appointment.find({
+      patientId,
+      localDay,
+      _id: { $ne: appointmentId },
+    });
 
+    patientToday.forEach((item) => {
+      const otherEnd = item.end;
+      const otherStart = item.start;
+      ConflictRole(startDT, endDT, otherStart, otherEnd);
+    });
+    const CheckAvailable = checkTherapistAvailability(
+      Truepatient,
+      startDT,
+      endDT,
+      Truetherapist
+    );
+    if (CheckAvailable.available == false) {
+      return next(new Error(CheckAvailable.error), {
+        statusCode: 402,
+      });
+    }
 
-let therapistToday = await Appointment.find({
-  therapistId,
-  localDay,
-  _id: { $ne: appointmentId }   // یعنی جلسه فعلی را حذف کن
-});
-therapistToday.forEach(item=>{
- const otherEnd=item.end
- const otherStart=item.start
-ConflictRole(startDT, endDT, otherStart, otherEnd);
-})
+    const { percentDefault, percentIntroduced } = Truetherapist;
 
-let patientToday = await Appointment.find({
-  patientId,
-  localDay,
-  _id: { $ne: appointmentId }
-});
+    const { introducedBy } = Truepatient;
+    let percent = percentDefault;
+    if (introducedBy && introducedBy.toString() == therapistId.toString()) {
+      percent = percentIntroduced;
+    } else {
+      percent = percentDefault;
+    }
+    const therapistShare = (patientFee * percent) / 100;
+    const clinicShare = patientFee - therapistShare;
+    const result = await Appointment.findByIdAndUpdate(appointmentId, {
+      patientName: Truepatient.firstName + " " + Truepatient.lastName,
+      therapistName: Truetherapist.firstName + " " + Truetherapist.lastName,
+      therapistId,
+      patientId,
+      type,
+      room,
+      notes,
+      patientFee,
+      start: startDT,
+      end: endDT,
+      createdBy,
+      duration,
+      therapistShare,
+      clinicShare,
+    });
 
-
-
-patientToday.forEach(item=>{
- const otherEnd=item.end
- const otherStart=item.start
-ConflictRole(startDT, endDT, otherStart, otherEnd);
-})
-
-   const result=await Appointment.findByIdAndUpdate(appointmentId,{
-    patientName:Truepatient.firstName+" "+Truepatient.lastName,
-    therapistName:Truetherapist.firstName+" "+Truetherapist.lastName,
-    therapistId,
-    patientId,
-    type,
-    room,
-    notes,
-    patientFee,
-    start:startDT,
-    end:endDT,
-    createdBy,
-    duration
-   })
-
-    res.status(201).json({result})
+    res.status(201).json({ result });
   } catch (error) {
-    next(error)
+    next(error);
+  }
+}
+
+export async function PublishDailyFromDefPlan(req, res, next) {
+  try {
+    const AllDef = req.body.payload;
+    const trueDate = req.body.trueDate;
+    const Day = moment(trueDate).format("YYYY-MM-DD");
+
+    for (const item of AllDef) {
+      const appointmentData = { ...item };
+
+      delete appointmentData._id;
+      delete appointmentData.day;
+
+      const START = moment(item.start).format("HH:mm");
+      const END = moment(item.end).format("HH:mm");
+      const fullStartdate = `${Day} ${START}`;
+      const fullEnddate = `${Day} ${END}`;
+
+      const startDt = DateTime.fromFormat(fullStartdate, "yyyy-MM-dd HH:mm", {
+        zone: "Asia/Tehran",
+      });
+      const endDt = DateTime.fromFormat(fullEnddate, "yyyy-MM-dd HH:mm", {
+        zone: "Asia/Tehran",
+      });
+
+      const result = new Appointment({
+        ...appointmentData,
+        start: startDt.toJSDate(),
+        localDay: Day,
+        end: endDt.toJSDate(),
+        date: Day, // اگر فیلد date نیاز باشد
+      });
+
+      await result.save();
+    }
+
+    res.status(200).json({
+      message: "برنامه با موفقیت منتشر شد",
+      count: AllDef.length,
+    });
+  } catch (error) {
+    next(error);
   }
 }

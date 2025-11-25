@@ -21,6 +21,11 @@ import LeaveRequest from "../models/LeaveRequest.js";
 import moment from "moment-jalaali";
 import { DeleteAtChangeStatus } from "../services/appointment.js";
 import salary from "../models/salary.js";
+import archiveTherapist from "../models/archiveTherapist.js";
+import DefAppointments from "../models/DefAppointments.js";
+import message from "../models/message.js";
+import mongoose from "mongoose";
+import archievePatient from "../models/archievePatient.js";
 
 
 
@@ -111,6 +116,38 @@ export async function AddPatientToTherapist(req, res, next) {
   }
 }
 
+export async function RemovePatientToTherapist(req, res, next) {
+  try {
+    const { patientId, therapistId } = req.body;
+
+    const OneTherapist = await therapist.findById(therapistId);
+    const OnePatient = await patient.findById(patientId);
+    if (!OneTherapist || !OnePatient) {
+      const error = new Error("درمانگر یا مراجع پیدا نشد");
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    if (OneTherapist.patients.includes(patientId)) {
+      OneTherapist.patients.pop(patientId);
+    }
+    if (OnePatient.therapists.includes(therapistId)) {
+      OnePatient.therapists.pop(therapistId);
+    }
+
+    await Promise.all([OneTherapist.save(), OnePatient.save()]);
+
+    res.status(200).json({
+      message: "مراجع از لیست مراجعان درمانگر حذف شد",
+      therapist: OneTherapist,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+
 export async function DailyScheduleOfTherapist(req, res, next) {
   try {
     const { therapistId, date } = req.query;
@@ -141,12 +178,18 @@ export async function DailyScheduleOfTherapist(req, res, next) {
 export async function adminChangeStatusAndMakefinance(req, res, next) {
   try {
     const userId = req.user.id 
-    const { appointmentId, status_clinic } = req.body;
+    const { appointmentId, status_clinic,payAt,pay_details ,payment} = req.body;
     if (!status_clinic || !appointmentId) {
       const error = new Error("مقادیر وارد شده نادرست است");
       error.statusCode = 404;
       return next(error);
     }
+        if (status_clinic=="completed-paid"&(!payAt || !pay_details)) {
+      const error = new Error("لطفا تاریخ و جزئیات پرداخت را وارد کنید!");
+      error.statusCode = 404;
+      return next(error);
+    }
+
     const OneAppointment = await appointment.findById(appointmentId);
     if (!OneAppointment) {
       const error = new Error("ویزیت مورد نظر پیدا نشد");
@@ -157,8 +200,10 @@ export async function adminChangeStatusAndMakefinance(req, res, next) {
     OneAppointment.status_clinic = status_clinic;
 
         if (status_clinic=="canceled"||status_clinic=="scheduled"){
-      await DeleteAtChangeStatus(appointmentId)
       
+          OneAppointment.paidAt=0
+  OneAppointment.pay_details=0
+  OneAppointment.payment=0
         const updateAppointment = await OneAppointment.save();
       res.status(201).json({
         message: "وضعیت ویزیت بروز رسانی شد",
@@ -173,50 +218,21 @@ export async function adminChangeStatusAndMakefinance(req, res, next) {
 
     }
 
-
-
     if (
       (status_clinic === "completed-notpaid" ||
         status_clinic === "completed-paid" ||
-        status_clinic === "bimeh") &&
-      OneAppointment.status_therapist === "completed"
-    ) {
-      const isFinancial = await financial.findOne({
-        appointmentId: appointmentId,
-      });
-      if (isFinancial) {
-      isFinancial.payment=status_clinic
-      const updateFinance=await isFinancial.save()
+        status_clinic === "bimeh")
+    ){
+       OneAppointment.paidAt=payAt
+  OneAppointment.pay_details=pay_details
+  OneAppointment.payment=payment
       const updateAppoint=await OneAppointment.save()
       res.status(201).json({
           message: "وضعیت پرداخت تغییر کرد",
-          updateFinance,
+         
           updateAppoint
         });
-      } else {
-        const payment = status_clinic;
-        const [resultFinancial, updatedAppointment] = await Promise.all([
-          addFinancial(appointmentId, userId, payment),
-         await OneAppointment.save(),
-        ]);
-
-        res.status(201).json({
-          message: "وضعیت ویزیت تغییر و تراکنش مالی ثبت گردید",
-          resultFinancial,
-          updatedAppointment,
-        });
-      }
-    }
-    if((status_clinic === "completed-notpaid" ||
-        status_clinic === "completed-paid" ||
-        status_clinic === "bimeh") &&
-      OneAppointment.status_therapist == "absect"||OneAppointment.status_therapist=="scheduled"){
-        const resault=await OneAppointment.save()
-         res.status(201).json({
-          message: "وضعیت ویزیت تغییر کرد",
-         resault
-        });
-      }
+      } 
     
     
   } catch (error) {
@@ -317,13 +333,13 @@ export async function GetPatientFinance(req, res, next) {
     }
     query.patientId = patientId;
     if (startDay && !endDay) {
-      query.localDay_visit = { $gte: startDay };
+      query.localDay = { $gte: startDay };
     }
     if (startDay && endDay) {
-      query.localDay_visit = { $gte: startDay, $lte: endDay };
+      query.localDay = { $gte: startDay, $lte: endDay };
     }
     if (!startDay && endDay){
-     query.localDay_visit ={ $lte: endDay
+     query.localDay ={ $lte: endDay
     }}
     const list=await FindPatientFinance(query)
     res.status(201).json(list)
@@ -504,24 +520,47 @@ export async function EditTherapist(req,res,next) {
 
 
 
-export async function DeleteTherapist(req,res,next) {
+export async function DeleteTherapist(req, res, next) {
   try {
-    const id=req.body.id
+    const { id } = req.body;
 
-
-    const resault=await therapist.findByIdAndDelete(id)
-    if(!resault){
-      return next( new Error())
+    const isTherapist = await therapist.findById(id);
+    if (!isTherapist) {
+      return next(new Error("درمانگر مورد نظر یافت نشد!"));
     }
-    res.status(201).json({
-      message:"درمانگر با موفقیت حذف شد"
-    })
-  } catch (error) {
-    next(error)
+
+    const existingArchive = await archiveTherapist.findOne({ original_id: id });
     
+    if (existingArchive) {
+      // فقط حذف کن - به ترتیب
+      await DefAppointments.deleteMany({ therapistId: id });
+      await therapist.deleteOne({ _id: id });
+      
+    } else {
+      // آرشیو کن سپس حذف کن - به ترتیب
+      const therapistData = isTherapist.toObject();
+      delete therapistData._id;
+      
+      const newArchive = new archiveTherapist({
+        ...therapistData,
+        original_id: id,
+        archivedAt: new Date()
+      });
+
+      await newArchive.save();      // اول آرشیو کن
+      await DefAppointments.deleteMany({ therapistId: id }); // سپس حذف کن
+      await therapist.deleteOne({ _id: id }); // در آخر درمانگر رو حذف کن
+    }
+
+    res.status(200).json({
+      message: "عملیات با موفقیت انجام شد"
+    });
+
+  } catch (error) {
+    next(error);
   }
-  
 }
+
 
 export async function MakePatient(req,res,next) {
   try {
@@ -562,6 +601,7 @@ export async function MakePatient(req,res,next) {
           address,
           phone,
           workDays,
+          wallet:0
     
         });
 if (introducedBy) {
@@ -657,20 +697,45 @@ export async function EditPatient(req,res,next) {
 
 
 export async function DeletePatient(req,res,next) {
-  try {
-    const id=req.body.id
+ try {
+    const { id } = req.body;
 
-
-    const resault=await patient.findByIdAndDelete(id)
-    if(!resault){
-      return next(new Error())
+    const isPatient = await patient.findById(id);
+    if (!isPatient) {
+      return next(new Error("مراجع مورد نظر یافت نشد!"));
     }
-    res.status(201).json({
-      message:"مراجع با موفقیت حذف شد"
-    })
-  } catch (error) {
-    next(error)
+
+    const existingArchive = await archievePatient.findOne({ original_id: id });
     
+    if (existingArchive) {
+     
+      await DefAppointments.deleteMany({ patientId: id });
+      await patient.deleteOne({ _id: id });
+      
+    } else {
+    
+      const patientData = isPatient.toObject();
+      delete patientData._id;
+      
+      const newArchive = new archievePatient({
+        ...patientData,
+        original_id: id,
+        archivedAt: new Date()
+      });
+console.log("ahaau");
+      await newArchive.save();  
+      console.log("ahaau222");
+         
+      await DefAppointments.deleteMany({ patientId: id }); 
+      await patient.deleteOne({ _id: id }); 
+    }
+
+    res.status(200).json({
+      message: "عملیات با موفقیت انجام شد"
+    });
+
+  } catch (error) {
+    next(error);
   }
   
 }

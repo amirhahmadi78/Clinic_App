@@ -108,6 +108,10 @@ const PatientSchema = new Schema(
     refreshTokens: {
       type: [RefreshTokenSchema],
     },
+    wallet:{
+      type:Number,
+      required:true
+    }
   },
   {
     timestamps: true,

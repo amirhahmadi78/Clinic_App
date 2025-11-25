@@ -13,9 +13,10 @@ import patientRoute from "./routes/patient.js"
 import messageRoute from "./routes/message.js";
 import exerciseRoute from "./routes/exercise.js"
 import noteBookRoute from "./routes/noteBook.js";
+import transactionRoute from "./routes/transaction.js"
 import cors from "cors";
 import cookieParser from "cookie-parser";
-
+import DefAppointmentRoute from "./routes/DefAppointments.js"
 const app = express();
 const PORT = process.env.PORT || 8642;
 const DB_URI = "mongodb://localhost:27017/clinic_app";
@@ -61,6 +62,9 @@ app.use(patientRoute);
 app.use(messageRoute);
 app.use(exerciseRoute);
 app.use(noteBookRoute)
+app.use(DefAppointmentRoute)
+app.use(transactionRoute)
+
 
 app.use((error, req, res, next) => {
   console.error(error); 

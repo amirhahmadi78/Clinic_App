@@ -48,52 +48,12 @@ export async function therapistChangeStatusAndMakefinance(req, res, next) {
 
     OneAppointment.status_therapist = status_therapist;
 
-    if(status_therapist=="scheduled"||status_therapist=="absent"){
-      DeleteAtChangeStatus(OneAppointment._id)
-      const UpdateAppoint=await OneAppointment.save()
-      res.status(201).json({
-        message:"تغییر با موفقیت انجام شد",
-        UpdateAppoint
-      })
-    }
+  const newAppointmat=await OneAppointment.save()
 
-
-if (status_therapist=="completed"&&(OneAppointment.status_clinic=="scheduled"||OneAppointment.status_clinic=="canceled")){
-  await OneAppointment.save()
-  res.status(201).json({
-    message:"وضعیت مراجع با موفقیت تغییر کرد!"
+  res.status(200).json({
+    newAppointmat,
+    message:"وضعیت ویزیت با موفقیت تغییر کرد"
   })
-}
-
-    if (
-      (OneAppointment.status_clinic === "completed-notpaid" ||
-        OneAppointment.status_clinic === "completed-paid" ||
-        OneAppointment.status_clinic === "bimeh") &&
-      status_therapist === "completed"
-    ) {
-      const isFinancial = await financial.findOne({
-        appointmentId: appointmentId,
-      });
-      if (isFinancial) {
-        const error = new Error(
-          "امور مالی مربوط به ویزیت مورد نظر ثبت شده می باشد"
-        );
-        error.statusCode = 404;
-        return next(error);
-      } else {
-        const payment=OneAppointment.status_clinic
-        const [resultFinancial, updatedAppointment] = await Promise.all([
-          addFinancial(appointmentId, userId,payment),
-          OneAppointment.save(),
-        ]);
-
-        res.status(201).json({
-          message:"وضعیت ویزیت تغییر و تراکنش مالی ثبت گردید",
-          resultFinancial,
-          updatedAppointment
-        })
-      }
-    } 
   } catch (error) {
     next(error);
   }
