@@ -1,7 +1,7 @@
 // controllers/transactionController.js
 import transactionService from "../services/transaction.js";
 
-export const walletDeposit = async (req, res) => {
+export const walletDeposit = async (req, res,next) => {
   try {
     const { patientId, amount, description } = req.body;
     
@@ -9,14 +9,11 @@ export const walletDeposit = async (req, res) => {
     
     res.json(result);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+  next(error)
   }
 };
 
-export const walletWithdraw = async (req, res) => {
+export const walletWithdraw = async (req, res,next) => {
   try {
     const { patientId, amount, description } = req.body;
     
@@ -24,14 +21,11 @@ export const walletWithdraw = async (req, res) => {
     
     res.json(result);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+ next(error)
   }
 };
 
-export const appointmentPayment = async (req, res) => {
+export const appointmentPayment = async (req, res,next) => {
   try {
     const { patientId, amount, appointmentId, description } = req.body;
     
@@ -39,29 +33,24 @@ export const appointmentPayment = async (req, res) => {
     
     res.json(result);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+next(error)
   }
 };
 
-export const appointmentCancel = async (req, res) => {
+export const appointmentCancel = async (req, res,next) => {
   try {
-    const { patientId, amount, appointmentId, description } = req.body;
+    const {  appointmentId } = req.body;
+
     
-    const result = await transactionService.appointmentCancel(patientId, amount, appointmentId, description);
+    const result = await transactionService.appointmentCancel( appointmentId);
     
     res.json(result);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+   next(error)
   }
 };
 
-export const getWalletBalance = async (req, res) => {
+export const getWalletBalance = async (req, res,next) => {
   try {
     const { patientId } = req.params;
     
@@ -73,10 +62,7 @@ export const getWalletBalance = async (req, res) => {
       formattedBalance: transactionService.formatAmount(balance)
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+   next(error)
   }
 };
 
@@ -84,6 +70,7 @@ export const getTransactionHistory = async (req, res) => {
   try {
     const { patientId } = req.params;
     const { page, limit, type, for: forFilter, startDate, endDate } = req.query;
+
     
     const result = await transactionService.getTransactionHistory(
       patientId, 
@@ -97,14 +84,11 @@ export const getTransactionHistory = async (req, res) => {
       ...result
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    next(error)
   }
 };
 
-export const getWalletInfo = async (req, res) => {
+export const getWalletInfo = async (req, res,next) => {
   try {
     const { patientId } = req.params;
     
@@ -115,9 +99,6 @@ export const getWalletInfo = async (req, res) => {
       ...walletInfo
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    next(error)
   }
 };

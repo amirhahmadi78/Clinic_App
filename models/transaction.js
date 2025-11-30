@@ -25,7 +25,8 @@ const transactionsSchema = new Schema(
    ,
    appointmentId:{
     type:mongoose.Schema.Types.ObjectId,
-    ref:"appointment"
+    ref:"appointment",
+  
    },
    type:{type:String,
     required:true,

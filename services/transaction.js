@@ -1,4 +1,6 @@
 
+import message from "../models/message.js";
+import patient from "../models/patient.js";
 import Transaction from "../models/transaction.js";
 
 class TransactionService {
@@ -6,6 +8,11 @@ class TransactionService {
   // 📥 واریز به کیف پول (افزایش موجودی)
   async walletDeposit(patientId, amount, description = "واریز به کیف پول") {
     try {
+        const truePatient=await patient.findById(patientId)
+
+        
+
+
       const transaction = await Transaction.create({
         patientId,
         amount,
@@ -13,10 +20,12 @@ class TransactionService {
         type: "induce",
         description: description || `واریز به کیف پول - ${this.formatAmount(amount)} تومان`
       });
-      
+    truePatient.wallet+=amount
+    const UpdatePatient=await truePatient.save()
       return {
         success: true,
         transaction,
+        newBalance:UpdatePatient.wallet,
         message: "واریز با موفقیت انجام شد"
       };
     } catch (error) {
@@ -28,7 +37,9 @@ class TransactionService {
   async walletWithdraw(patientId, amount, description = "برداشت از کیف پول") {
     try {
       // چک کردن موجودی کافی
-      const balance = await this.calculateBalance(patientId);
+      // const balance = await this.calculateBalance(patientId);
+      const TruePatient=await patient.findById(patientId)
+      const balance=TruePatient.wallet
       if (balance < amount) {
         return {
           success: false,
@@ -43,10 +54,12 @@ class TransactionService {
         type: "reduce",
         description: description || `برداشت از کیف پول - ${this.formatAmount(amount)} تومان`
       });
-
+      TruePatient.wallet -=amount
+      const UpdatePatient=await TruePatient.save()
       return {
         success: true,
         transaction,
+        newBalance:UpdatePatient.wallet,
         message: "برداشت با موفقیت انجام شد"
       };
     } catch (error) {
@@ -58,13 +71,16 @@ class TransactionService {
   async appointmentPayment(patientId, amount, appointmentId, description) {
     try {
       // چک کردن موجودی کافی
-      const balance = await this.calculateBalance(patientId);
+        // const balance = await this.calculateBalance(patientId);
+      const TruePatient=await patient.findById(patientId)
+        const balance=TruePatient.wallet
       if (balance < amount) {
         return {
           success: false,
           message: "موجودی کیف پول برای پرداخت جلسه کافی نیست"
         };
       }
+const existTransation=await Transaction.findOne({appointmentId:appointmentId})
 
       const transaction = await Transaction.create({
         patientId,
@@ -74,10 +90,12 @@ class TransactionService {
         type: "reduce",
         description: description || `پرداخت جلسه درمان - ${this.formatAmount(amount)} تومان`
       });
-
+      TruePatient.wallet-=amount
+      const Updatedpatient=await TruePatient.save()
       return {
         success: true,
         transaction,
+        newBalance:Updatedpatient.wallet,
         message: "پرداخت جلسه با موفقیت انجام شد"
       };
     } catch (error) {
@@ -86,15 +104,31 @@ class TransactionService {
   }
 
   // ↩️ کنسل کردن پرداخت جلسه (بازگشت پول - افزایش موجودی)
-  async appointmentCancel(patientId, amount, appointmentId, description) {
+  async appointmentCancel( appointmentId) {
+
     try {
+      const listHasTransaction=await Transaction.find({
+        for: "appointment",
+        appointmentId:appointmentId,
+        type:"reduce"
+      })
+
+      const HasTransaction=listHasTransaction[0]
+      console.log(HasTransaction);
+      
+      
+      let Truepatient=await patient.findById(HasTransaction.patientId)
+      Truepatient.wallet+=HasTransaction.amount
+      await Truepatient.save()
+
+
       const transaction = await Transaction.create({
-        patientId,
-        amount,
+        patientId:HasTransaction.patientId,
+        amount:HasTransaction.amount,
         for: "appointment",
         appointmentId,
         type: "induce",
-        description: description || `بازپرداخت کنسل شده جلسه - ${this.formatAmount(amount)} تومان`
+        description:  `بازپرداخت کنسل شده جلسه - ${this.formatAmount(HasTransaction.amount)} تومان`
       });
 
       return {
@@ -129,11 +163,15 @@ class TransactionService {
   // 📊 گرفتن موجودی و اطلاعات
   async getWalletInfo(patientId) {
     try {
+      
+      const TruePatient=await patient.findById(patientId)
+        const Patientbalance=TruePatient.wallet
       const balance = await this.calculateBalance(patientId);
       const lastTransactions = await this.getTransactionHistory(patientId, 1, 5);
       
       return {
         balance,
+        Patientbalance,
         lastTransactions: lastTransactions.transactions,
         currency: "تومان"
       };

@@ -971,3 +971,17 @@ const CancelPercent=cancel.length/All.length *100
 }
 
 
+export async function FindOnePatient(req,res,next){
+  try {
+    const{patientId}=req.query
+    const OnePatient =await patient.findById(patientId)
+    if(!OnePatient){
+      return next(new Error("مراجع مورد نظر وجود ندارد"),{
+        statusCode:404
+      })
+    }
+    res.status(200).json(OnePatient)
+  } catch (error) {
+    next(error)
+  }
+}

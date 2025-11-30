@@ -6,6 +6,7 @@ import patient from "../models/patient.js";
 import financial from "../models/financial.js";
 import moment from "moment-jalaali";
 import { checkTherapistAvailability } from "../utils/Available-check.js";
+import transaction from "../models/transaction.js";
 
 export async function AddAppointment(req, res, next) {
   try {
@@ -117,30 +118,69 @@ export async function AddAppointment(req, res, next) {
 export async function deleteAppointment(req, res, next) {
   try {
     const { appointmentId } = req.body;
-    let FinancialOperations = "ویزیت حذف شده فاقد عملیات مالی بود";
-    const deletedAppointment = await Appointment.findByIdAndDelete(
-      appointmentId
-    );
-    const deleteFinancial = await financial.findOneAndDelete({
-      appointmentId: appointmentId,
-    });
-    if (deleteFinancial) {
-      FinancialOperations = "عملیات مالی مورد نظر حذف گردید";
-    }
-    if (!deletedAppointment) {
+    
+    // پیدا کردن نوبت برای validation
+    const targetAppointment = await Appointment.findById(appointmentId);
+    if (!targetAppointment) {
       const error = new Error("ویزیت مورد نظر وجود ندارد");
       error.statusCode = 404;
       return next(error);
     }
-    res.status(200).json({
-      message: " ویزیت مورد نظر با موفقیت حذف شد و" + FinancialOperations,
-      deletedAppointment,
-    });
-  } catch (error) {
-    error = new Error("برنامه ی مورد نظر وجود ندارد");
-    error.statusCode = 404;
 
-    next(error);
+    let refundMessage = "";
+    
+    // چک کردن آیا تراکنش کیف پول برای این نوبت وجود داره
+    const walletTransaction = await transaction.findOne({
+      appointmentId: appointmentId,
+      for: "appointment",
+      type: "reduce" // فقط تراکنش‌های پرداخت
+    });
+
+    // اگر با کیف پول پرداخت شده بود، بازپرداخت کن
+    if (walletTransaction) {
+      let patientForRefund = await patient.findById(walletTransaction.patientId);
+      
+      if (patientForRefund) {
+        // بازپرداخت به کیف پول
+        patientForRefund.wallet += walletTransaction.amount;
+        await patientForRefund.save();
+        
+        // ایجاد تراکنش بازپرداخت
+        await transaction.create({
+          patientId: walletTransaction.patientId,
+          amount: walletTransaction.amount,
+          for: "appointment",
+          appointmentId: appointmentId,
+          type: "induce",
+          description: `بازپرداخت بابت کنسلی جلسه - ${walletTransaction.amount} تومان`
+        });
+
+        refundMessage = ` و مبلغ ${walletTransaction.amount} تومان به کیف پول بیمار بازگردانده شد`;
+        
+        // حذف تراکنش اصلی پرداخت (اختیاری - بهتره نگهش داری برای تاریخچه)
+        // await walletTransaction.deleteOne();
+      }
+    }
+
+    // حذف نوبت
+    const deletedAppointment = await Appointment.findByIdAndDelete(appointmentId);
+
+    res.status(200).json({
+      message: "ویزیت مورد نظر با موفقیت حذف شد" + refundMessage,
+      deletedAppointment,
+      refund: {
+        wasRefunded: !!walletTransaction,
+        amount: walletTransaction?.amount || 0
+      }
+    });
+
+  } catch (error) {
+    console.error("Error in deleteAppointment:", error);
+    
+    
+    const customError = new Error("خطا در حذف ویزیت");
+    customError.statusCode = 500;
+    next(customError);
   }
 }
 
