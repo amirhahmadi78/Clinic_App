@@ -20,12 +20,11 @@ const defappointmentSchema = new Schema(
     duration: { type: Number, required: true }, // minutes, computed (end-start)
     type: {
       type: String,
-      enum: ["session", "assessment", "break", "online","blocked"],
+      enum: ["session", "assessment", "lunch", "online","break"],
       default: "session",
     },
     patientFee:{
       type:Number
-      ,required:true
     },
     day:{
       type:String,
@@ -34,8 +33,13 @@ const defappointmentSchema = new Schema(
     ,
     status_clinic: {
       type: String,
-      enum: ["scheduled","completed-notpaid", "completed-paid", "canceled", "bimeh","absent"],
+      enum: ["scheduled","completed-notpaid", "completed-paid", "canceled", "bimeh","absent","break"],
       default: "scheduled",
+    },
+         role: {
+      type: String,
+      enum: ["SLP", "OT", "PSY", "PT","therapist"],
+      required:true
     },
     status_therapist:{
       type:String,

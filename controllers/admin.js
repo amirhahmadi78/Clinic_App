@@ -196,7 +196,11 @@ export async function adminChangeStatusAndMakefinance(req, res, next) {
       error.statusCode = 404;
       return next(error);
     }
-
+if(OneAppointment.status_clinic=="break"){
+  return next(new Error("این تایم فقط برای ناهار یا استراحت می باشد و قابل پرداخت یا لغو نمیباشد!"),{
+    statusCode:403
+  })
+}
     OneAppointment.status_clinic = status_clinic;
 
         if (status_clinic=="canceled"||status_clinic=="scheduled"){
@@ -520,7 +524,7 @@ export async function EditTherapist(req,res,next) {
 
 
 
-export async function DeleteTherapist(req, res, next) {
+export async function ArchiveTherapist(req, res, next) {
   try {
     const { id } = req.body;
 
@@ -739,6 +743,68 @@ console.log("ahaau");
   }
   
 }
+
+export async function GetArchiveTherapists(req, res, next) {
+  try {
+    const ArchivedTherapistList=await archiveTherapist.find()
+    res.status(200).json(ArchivedTherapistList)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function RestoreTherapist(req, res, next) {
+  try {
+    const { original_id } = req.body;
+console.log(original_id);
+
+    // 1. بررسی وجود رکورد در آرشیو
+    const archivedRecord = await archiveTherapist.findOne({ original_id });
+    if (!archivedRecord) {
+      return next(new Error("رکورد آرشیو شده با این شناسه یافت نشد!"));
+    }
+
+    // 2. بررسی وجود درمانگر فعال با همین ID (برای جلوگیری از تداخل)
+    const existingTherapist = await therapist.findById(original_id);
+    if (existingTherapist) {
+      return next(new Error("درمانگر با این شناسه هم‌اکنون فعال است!"));
+    }
+
+    // 3. آماده‌سازی داده‌ها برای بازگردانی
+    const therapistData = archivedRecord.toObject()
+    
+    // حذف فیلدهای خاص آرشیو
+    delete therapistData._id;
+    delete therapistData.original_id;
+    delete therapistData.archivedAt;
+    delete therapistData.createdAt;
+    delete therapistData.updatedAt;
+
+    // 4. بازگردانی درمانگر
+    const restoredTherapist = new therapist({
+      ...therapistData,
+      _id: original_id  // استفاده از ID اصلی
+    });
+
+    await restoredTherapist.save();
+
+    // 5. حذف از آرشیو
+    await archiveTherapist.deleteOne({ original_id });
+
+    res.status(200).json({
+      message: "درمانگر با موفقیت بازگردانی شد",
+      data: {
+        id: restoredTherapist._id,
+        name: restoredTherapist.name,
+        restoredAt: new Date()
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
 
 
 export  async function TherapistAtDay(req,res,next){
@@ -981,6 +1047,105 @@ export async function FindOnePatient(req,res,next){
       })
     }
     res.status(200).json(OnePatient)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function GetArchivePatients(req,res,next){
+ try {
+  const archievePatients=await archievePatient.find()
+  res.status(200).json(archievePatients)
+ } catch (error) {
+  next(error)
+ }
+
+
+
+}
+
+export async function RestorePatient(req, res, next) {
+  try {
+    const { original_id } = req.body;
+console.log(original_id);
+
+    // 1. بررسی وجود رکورد در آرشیو
+    const archivedRecord = await archievePatient.findOne({ original_id });
+    if (!archivedRecord) {
+      return next(new Error("رکورد آرشیو شده با این شناسه یافت نشد!"));
+    }
+
+    // 2. بررسی وجود درمانگر فعال با همین ID (برای جلوگیری از تداخل)
+    const existingPatient = await patient.findById(original_id);
+    if (existingPatient) {
+      return next(new Error("مراجع با این شناسه هم‌اکنون فعال است!"));
+    }
+
+    // 3. آماده‌سازی داده‌ها برای بازگردانی
+    const patientData = archivedRecord.toObject()
+    
+    // حذف فیلدهای خاص آرشیو
+    delete patientData._id;
+    delete patientData.original_id;
+    delete patientData.archivedAt;
+    delete patientData.createdAt;
+    delete patientData.updatedAt;
+
+    // 4. بازگردانی درمانگر
+    const restoredPatient = new patient({
+      ...patientData,
+      _id: original_id  // استفاده از ID اصلی
+    });
+
+    await restoredPatient.save();
+
+    // 5. حذف از آرشیو
+    await archievePatient.deleteOne({ original_id });
+
+    res.status(200).json({
+      message: "درمانگر با موفقیت بازگردانی شد",
+      data: {
+        id: restoredPatient._id,
+        name: restoredPatient.name,
+        restoredAt: new Date()
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+export async function destroyPatient(req, res, next) {
+  try {
+
+    
+    const {original_id}=req.query
+
+    
+    if(!original_id){
+      return next(new Error("درمانگر انتخاب نشده") ,{
+        statusCode:402
+      })
+    }
+    const Deleted=await archievePatient.deleteOne({original_id})
+    res.status(201).json(Deleted)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function destroytherapist(req, res, next) {
+    try {
+    const {original_id}=req.query
+    if(!original_id){
+      return next(new Error("درمانگر انتخاب نشده") ,{
+        statusCode:402
+      })
+    }
+    const Deleted=await archiveTherapist.deleteOne({original_id})
+    res.status(201).json(Deleted)
   } catch (error) {
     next(error)
   }

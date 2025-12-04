@@ -18,7 +18,7 @@ const appointmentSchema = new Schema(
     duration: { type: Number, required: true }, // minutes, computed (end-start)
     type: {
       type: String,
-      enum: ["session", "assessment", "break", "online", "blocked"],
+      enum: ["session", "assessment", "break", "online", "lunch"],
       default: "session",
     },
     patientFee: {
@@ -34,8 +34,14 @@ const appointmentSchema = new Schema(
         "canceled",
         "bimeh",
         "absent",
+        "break"
       ],
       default: "scheduled",
+    },
+         role: {
+      type: String,
+      enum: ["SLP", "OT", "PSY", "PT","therapist"],
+      required:true
     },
     status_therapist: {
       type: String,

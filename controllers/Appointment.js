@@ -7,6 +7,8 @@ import financial from "../models/financial.js";
 import moment from "moment-jalaali";
 import { checkTherapistAvailability } from "../utils/Available-check.js";
 import transaction from "../models/transaction.js";
+import priceCache from "../utils/priceCache.js";
+import ServicePrice from "../models/ServicePrice.js";
 
 export async function AddAppointment(req, res, next) {
   try {
@@ -20,9 +22,11 @@ export async function AddAppointment(req, res, next) {
       room,
       notes,
       patientFee,
+      role
     } = req.body;
 
-    console.log("START: ", start);
+
+console.log(req.body);
 
     const startDT = DateTime.fromISO(start, { zone: "Asia/Tehran" });
     const endDT = startDT.plus({ minutes: duration });
@@ -46,9 +50,66 @@ export async function AddAppointment(req, res, next) {
       { patientId },
       "start end"
     );
-    console.log("patiessssss" + PatientAppointments);
 
-    for (let OneAppointment of PatientAppointments) {
+if(type=="break"||type=="lunch"){
+
+ const TherapistAppointments = await Appointment.find(
+      { therapistId },
+      "start end"
+    );
+
+    for (let OneAppointment of TherapistAppointments) {
+      const otherStart = OneAppointment.start;
+      const otherEnd = OneAppointment.end;
+      ConflictRole(startDT, endDT, otherStart, otherEnd);
+    }
+
+
+   const MakeAppointment = new Appointment({
+      therapistName: TherapistExist.firstName + " " + TherapistExist.lastName,
+      therapistId,
+      patientId,
+      patientName: PatientExist.firstName + " " + PatientExist.lastName,
+      start: startDT.toJSDate(),
+      end: endDT.toJSDate(),
+      duration,
+      type,
+      status,
+      room,
+      notes,
+      createdBy,
+      localDay,
+      patientFee:0,
+      therapistShare:0,
+      clinicShare:0,
+      role,
+      status_clinic:"break"
+    });
+    const CheckAvailable = checkTherapistAvailability(
+      PatientExist,
+      startDT,
+      endDT,
+      TherapistExist
+    );
+    if (CheckAvailable.available == false) {
+      return next(new Error(CheckAvailable.error), {
+        statusCode: 402,
+      });
+    }
+    const newAppointment = await MakeAppointment.save();
+    res.status(200).json({
+      newAppointment,
+    });
+
+
+}else{
+   
+
+
+
+
+    
+ for (let OneAppointment of PatientAppointments) {
       const otherStart = OneAppointment.start;
       const otherEnd = OneAppointment.end;
       ConflictRole(startDT, endDT, otherStart, otherEnd);
@@ -92,6 +153,7 @@ export async function AddAppointment(req, res, next) {
       createdBy,
       localDay,
       patientFee,
+      role,
       therapistShare,
       clinicShare,
     });
@@ -110,6 +172,14 @@ export async function AddAppointment(req, res, next) {
     res.status(200).json({
       newAppointment,
     });
+
+}
+
+
+
+
+
+   
   } catch (error) {
     next(error);
   }
@@ -197,7 +267,7 @@ export async function DailyScheduleOfTherapist(req, res, next) {
     date = moment(date, "jYYYY-jMM-jDD").format("YYYY-MM-DD");
     const dt = DateTime.fromISO(date, { zone: "Asia/Tehran" });
     const localDay = dt.toFormat("yyyy-MM-dd");
-    console.log("localDay", localDay);
+
 
     const appointments = await Appointment.find({
       therapistId: req.user.id,
@@ -294,6 +364,7 @@ export async function EditAppointmen(req, res, next) {
       room,
       notes,
       patientFee,
+      role
     } = req.body.payload;
 
     if (!appointmentId) {
@@ -316,7 +387,47 @@ export async function EditAppointmen(req, res, next) {
       localDay,
       _id: { $ne: appointmentId }, // یعنی جلسه فعلی را حذف کن
     });
-    therapistToday.forEach((item) => {
+if(type=="break"||type=="lunch"){
+   therapistToday.forEach((item) => {
+      const otherEnd = item.end;
+      const otherStart = item.start;
+      ConflictRole(startDT, endDT, otherStart, otherEnd);
+    });
+   const CheckAvailable = checkTherapistAvailability(
+      Truepatient,
+      startDT,
+      endDT,
+      Truetherapist
+    );
+    if (CheckAvailable.available == false) {
+      return next(new Error(CheckAvailable.error), {
+        statusCode: 402,
+      });
+    }
+const result = await Appointment.findByIdAndUpdate(appointmentId, {
+      patientName: Truepatient.firstName + " " + Truepatient.lastName,
+      therapistName: Truetherapist.firstName + " " + Truetherapist.lastName,
+      therapistId,
+      patientId,
+      type,
+      room,
+      notes,
+      patientFee:0,
+      start: startDT,
+      end: endDT,
+      createdBy,
+      duration,
+      therapistShare:0,
+      clinicShare:0,
+      role,
+      status_clinic:"break"
+    });
+
+    res.status(201).json({ result });
+
+
+}else{
+ therapistToday.forEach((item) => {
       const otherEnd = item.end;
       const otherStart = item.start;
       ConflictRole(startDT, endDT, otherStart, otherEnd);
@@ -371,9 +482,13 @@ export async function EditAppointmen(req, res, next) {
       duration,
       therapistShare,
       clinicShare,
+      role
     });
 
     res.status(201).json({ result });
+}
+
+   
   } catch (error) {
     next(error);
   }
@@ -381,6 +496,7 @@ export async function EditAppointmen(req, res, next) {
 
 export async function PublishDailyFromDefPlan(req, res, next) {
   try {
+    
     const AllDef = req.body.payload;
     const trueDate = req.body.trueDate;
     const Day = moment(trueDate).format("YYYY-MM-DD");
@@ -403,8 +519,57 @@ export async function PublishDailyFromDefPlan(req, res, next) {
         zone: "Asia/Tehran",
       });
 
+      const serviceSkill=item.role
+      const serviceType=appointmentData.type
+      const duration=appointmentData.duration
+      const TherapistExist=await therapist.findById(appointmentData.therapistId)
+      if (!TherapistExist){
+        return next(new Error("درمانگر"+appointmentData.therapistName+"  وجود ندارد"))
+      }
+      const PatientExist=await patient.findById(appointmentData.patientId)
+           if (!PatientExist){
+        return next(new Error("مراجع" +appointmentData.patientName+ "وجود ندارد"))
+      }
+      let basePrice=null
+       basePrice=priceCache.getPrice(serviceSkill,serviceType,duration)
+     
+       
+       if(!basePrice){
+         basePrice = await ServicePrice.getPrice(
+              serviceType,
+              serviceSkill,
+              duration,
+              
+            );
+
+       }
+
+       let patientFee
+       let therapistShare
+       let clinicShare
+       if(appointmentData.patientFee==null||!appointmentData.patientFee){
+        patientFee=basePrice
+        if(PatientExist.introducedBy==TherapistExist._id){
+          therapistShare=Math.round(basePrice*TherapistExist.percentIntroduced/100)
+        }else{
+          therapistShare=Math.round(basePrice*TherapistExist.percentDefault/100)
+        }
+        
+        clinicShare=patientFee-therapistShare
+       }else{
+       patientFee=appointmentData.patientFee
+        therapistShare=appointmentData.therapistShare
+        clinicShare=appointmentData.clinicShare
+       }
+       
+      delete appointmentData.patientFee;
+      delete appointmentData.therapistShare;
+      delete appointmentData.clinicShare
       const result = new Appointment({
         ...appointmentData,
+        patientFee,
+        therapistShare,
+        clinicShare,
         start: startDt.toJSDate(),
         localDay: Day,
         end: endDt.toJSDate(),

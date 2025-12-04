@@ -18,6 +18,7 @@ const def_Appointment = new mongoose.Schema({
     ref: "therapist",
     required: true,
   },
+  
   therapistName: { type: String },
   start: { type: Date, required: true },
   day: { type: String, required: true },
@@ -56,6 +57,11 @@ const ArchivePatientSchema = new Schema(
       required: true,
       unique: true,
     },
+    original_id:{
+      type:Schema.Types.ObjectId,
+      required:true,
+      unique:true
+    },
     password: {
       type: String,
       required: true,
@@ -91,6 +97,10 @@ const ArchivePatientSchema = new Schema(
     address: {
       type: String,
       required: true,
+    },
+        wallet:{
+      type:Number,
+      required:true
     },
     workDays: {
       type: [workDaySchema],

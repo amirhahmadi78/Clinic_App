@@ -1,4 +1,4 @@
-console.log("avval");
+
 
 import express from "express";
 import mongoose from "mongoose";
@@ -14,9 +14,11 @@ import messageRoute from "./routes/message.js";
 import exerciseRoute from "./routes/exercise.js"
 import noteBookRoute from "./routes/noteBook.js";
 import transactionRoute from "./routes/transaction.js"
+import priceroute from "./routes/priceRoutes.js"
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import DefAppointmentRoute from "./routes/DefAppointments.js"
+import priceCache from './utils/priceCache.js';
 const app = express();
 const PORT = process.env.PORT || 8642;
 const DB_URI = "mongodb://localhost:27017/clinic_app";
@@ -64,7 +66,7 @@ app.use(exerciseRoute);
 app.use(noteBookRoute)
 app.use(DefAppointmentRoute)
 app.use(transactionRoute)
-
+app.use(priceroute)
 
 app.use((error, req, res, next) => {
   console.error(error); 
@@ -83,8 +85,9 @@ const connectDB = async () => {
     });
     console.log(" Connected to MongoDB");
 
-    app.listen(PORT, () => {
+    app.listen(PORT, async() => {
       console.log(` Server is running on http://localhost:${PORT}`);
+       await priceCache.loadAllPrices()
     });
   } catch (err) {
     console.error(" Database connection failed:", err.message);

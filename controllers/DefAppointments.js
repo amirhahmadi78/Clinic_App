@@ -69,6 +69,55 @@ export async function AddDefAppointment(req, res, next) {
       await PatientExist.save();
     }
 
+if(type=="lunch"||type=="break"){
+   const TherapistAppointments = await DefAppointments.find(
+      { therapistId, day: date },
+      "start end"
+    );
+
+    for (let OneAppointment of TherapistAppointments) {
+      const otherStart = OneAppointment.start;
+      const otherEnd = OneAppointment.end;
+      ConflictRole(startDT, endDT, otherStart, otherEnd);
+    }
+    const CheckAvailable = checkTherapistAvailability(
+      PatientExist,
+      startDT,
+      endDT,
+      TherapistExist
+    );
+    if (CheckAvailable.available == false) {
+      return next(new Error(CheckAvailable.error), {
+        statusCode: 402,
+      });
+    }
+ const MakeAppointment = new DefAppointments({
+      therapistName: TherapistExist.firstName + " " + TherapistExist.lastName,
+      therapistId,
+      patientId,
+      patientName: PatientExist.firstName + " " + PatientExist.lastName,
+      start: startDT.toJSDate(),
+      end: endDT.toJSDate(),
+      duration,
+      type,
+      room,
+      notes,
+      day: date,
+      createdBy,
+      localDay: trueDay,
+      patientFee:0,
+      therapistShare:0,
+      clinicShare:0,
+      role:TherapistExist.role,
+      status_clinic:"break"
+    });
+
+    const newDefAppointment = await MakeAppointment.save();
+    res.status(200).json({
+      newDefAppointment,
+    });
+}else{
+
     const PatientAppointments = await DefAppointments.find(
       { patientId, day: date },
       "start end"
@@ -129,6 +178,7 @@ export async function AddDefAppointment(req, res, next) {
       localDay: trueDay,
       patientFee,
       therapistShare,
+      role:TherapistExist.role,
       clinicShare,
     });
 
@@ -136,6 +186,11 @@ export async function AddDefAppointment(req, res, next) {
     res.status(200).json({
       newDefAppointment,
     });
+
+}
+
+
+
   } catch (error) {
     next(error);
   }
@@ -212,8 +267,47 @@ export async function EditDefAppointment(req, res, next) {
       error.statusCode = 404;
       return next(error);
     }
+if(type=="break"||type=="lunch"){
+   for (let OneAppointment of TherapistAppointments) {
+      const otherStart = OneAppointment.start;
+      const otherEnd = OneAppointment.end;
+      ConflictRole(startDT, endDT, otherStart, otherEnd);
+    }
 
-    const PatientAppointments = await DefAppointments.find(
+    const CheckAvailable = checkTherapistAvailability(
+      PatientExist,
+      startDT,
+      endDT,
+      TherapistExist
+    );
+    if (CheckAvailable.available == false) {
+      return next(new Error(CheckAvailable.error), {
+        statusCode: 402,
+      });
+    }
+ const result = await DefAppointments.findByIdAndUpdate(_id, {
+      therapistName: TherapistExist.firstName + " " + TherapistExist.lastName,
+      therapistId,
+      patientId,
+      patientName: PatientExist.firstName + " " + PatientExist.lastName,
+      start: startDT.toJSDate(),
+      end: endDT.toJSDate(),
+      duration,
+      type,
+      room,
+      notes,
+      day: date,
+      createdBy: createdBy,
+      localDay: trueDay,
+      patientFee:0,
+      therapistShare:0,
+      clinicShare:0,
+      role:TherapistExist.role,
+    });
+
+    res.status(201).json(result);
+}else{
+ const PatientAppointments = await DefAppointments.find(
       { patientId, day: date, _id: { $ne: _id } },
       "start end"
     );
@@ -274,9 +368,12 @@ export async function EditDefAppointment(req, res, next) {
       patientFee,
       therapistShare,
       clinicShare,
+      role:TherapistExist.role,
     });
 
     res.status(201).json(result);
+}
+   
   } catch (error) {
     next(error);
   }
