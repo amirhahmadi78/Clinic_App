@@ -91,6 +91,8 @@ const existTransation=await Transaction.findOne({appointmentId:appointmentId})
         description: description || `پرداخت جلسه درمان - ${this.formatAmount(amount)} تومان`
       });
       TruePatient.wallet-=amount
+      console.log(TruePatient.wallet);
+      
       const Updatedpatient=await TruePatient.save()
       return {
         success: true,

@@ -953,7 +953,36 @@ export async function GEtMonthSalary(req,res,next) {
   
 }
 
+export async function GEtMonthSalaryTherapist(req,res,next) {
+  try {
+    
+    
+    const {therapistId,YYYYMM}=req.query
+    if(!YYYYMM||!therapistId){
+      return next(new Error("یک درمانگر انتخاب کنید و یک ماه را برای بررسی فبش ها انتخاب کنید",{
+        statusCode:401
+      }))
+    }
 
+let monthsalary=0
+    const salaries=await salary.find({YYYYMM,"payAt.userId":therapistId})
+if(salaries.length>0){
+  salaries.map(item=>{
+    monthsalary+=item.fee
+  })
+}
+
+
+      res.status(200).json({
+        message:"لیست تراکنش ها",
+        salaries,
+        monthsalary
+      })
+  } catch (error) {
+    next(error)
+  }
+  
+}
 
 
 export async function GetUnprocessedAppointments(req, res, next) {
