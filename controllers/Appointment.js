@@ -9,6 +9,7 @@ import { checkTherapistAvailability } from "../utils/Available-check.js";
 import transaction from "../models/transaction.js";
 import priceCache from "../utils/priceCache.js";
 import ServicePrice from "../models/ServicePrice.js";
+import message from "../models/message.js";
 
 export async function AddAppointment(req, res, next) {
   try {
@@ -586,4 +587,62 @@ export async function PublishDailyFromDefPlan(req, res, next) {
   } catch (error) {
     next(error);
   }
+}
+
+export async function AddGroup(req, res, next) {
+try {
+   const {
+
+      groupSession,
+      
+      start,
+      duration,
+      
+      title,
+      room,
+      notes,
+      patientFee,
+      category,
+      description,
+
+    } = req.body;
+ const startDT = DateTime.fromISO(start, { zone: "Asia/Tehran" });
+    const endDT = startDT.plus({ minutes: duration });
+    const localDay = startDT.toFormat("yyyy-MM-dd");
+    const createdBy = req.user.Id;
+    console.log(startDT);
+    
+
+const NewGroup=await Appointment.create({
+  sessionType:"group",
+  start:startDT,
+  end:endDT,
+  duration,
+  localDay,
+  type:"session",
+  status_clinic:"scheduled",
+  role:"therapist",
+  description:category,
+  room,
+  createdBy,
+  groupSession,
+  patientFee,
+  notes,
+   clinicShare:patientFee/2,
+   therapistShare:patientFee/2
+
+})
+const MakedGroup=await NewGroup.save()
+
+  res.status(200).json({
+    message:"کلاس گروهی با موفقیت ثبت شد!",
+    MakedGroup
+  })
+} catch (error) {
+  next(error)
+}
+
+
+
+     
 }

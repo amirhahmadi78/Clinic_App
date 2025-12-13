@@ -4,15 +4,6 @@ const Schema = mongoose.Schema;
 
 const appointmentSchema = new Schema(
   {
-    therapistId: {
-      type: Schema.Types.ObjectId,
-      ref: "therapist",
-      required: true,
-      index: true,
-    },
-    therapistName: { type: String, required: true },
-    patientId: { type: Schema.Types.ObjectId, ref: "patient", required: true },
-    patientName: { type: String, required: true },
     start: { type: Date, required: true, index: true }, // UTC Date
     end: { type: Date, required: true, index: true }, // UTC Date
     duration: { type: Number, required: true }, // minutes, computed (end-start)
@@ -34,14 +25,14 @@ const appointmentSchema = new Schema(
         "canceled",
         "bimeh",
         "absent",
-        "break"
+        "break",
       ],
       default: "scheduled",
     },
-         role: {
+    role: {
       type: String,
-      enum: ["SLP", "OT", "PSY", "PT","therapist"],
-      required:true
+      enum: ["SLP", "OT", "PSY", "PT", "therapist"],
+      required: true,
     },
     status_therapist: {
       type: String,
@@ -57,7 +48,76 @@ const appointmentSchema = new Schema(
     therapistShare: { type: Number, required: true },
     paidAt: { type: String },
     pay_details: { type: String },
-    payment: { type: String, enum: ["card", "transfer", "cash", "wallet","0"] ,default:"0"},
+    payment: {
+      type: String,
+      enum: ["card", "transfer", "cash", "wallet", "0"],
+      default: "0",
+    },
+    sessionType: {
+      type: String,
+      enum: ["individual", "group"],
+      default: "individual",
+      required: true,
+    },
+
+    therapistId: {
+      type: Schema.Types.ObjectId,
+      ref: "therapist",
+
+      required: function () {
+        return this.sessionType === "individual";
+      },
+    },
+
+    patientId: {
+      type: Schema.Types.ObjectId,
+      ref: "patient",
+      required: function () {
+        return this.sessionType === "individual";
+      },
+    },
+
+    therapistName: { type: String, required: function () {
+        return this.sessionType === "individual"}},
+
+    patientName: { type: String, required: function () {
+        return this.sessionType === "individual" }},
+  
+    groupSession: {
+      therapists: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: "therapist",
+          required: function () {
+            return this.sessionType === "group";
+          },
+        },
+      ],
+      patients: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: "patient",
+          required: function () {
+            return this.sessionType === "group";
+          },
+        },
+      ],
+      onePatientFee: {
+        type: Number,
+        required: function () {
+          return this.sessionType === "group";
+        }
+      
+      },
+      
+    },
+     description: {
+        type: String,
+        required: function () {
+          return this.sessionType === "group";
+        }
+      
+      }
   },
 
   { timestamps: true }

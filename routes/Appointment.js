@@ -10,10 +10,14 @@ import {
   GetDailyDef,
   EditAppointmen,
   PublishDailyFromDefPlan,
+  AddGroup,
 } from "../controllers/Appointment.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
 
 router.post("/appointment/add", requireAuth, csrfGuard, AddAppointment);
+
+router.post("/appointment/addgroup", requireAuth, csrfGuard, AddGroup);
+
 
 router.get(
   "/appointment/dailytherapist",

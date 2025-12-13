@@ -230,6 +230,23 @@ export async function GetDailyDefPatient(req, res, next) {
   }
 }
 
+export async function GetDailyDefTherapist(req, res, next) {
+  try {
+    const { therapistId } = req.query;
+
+    if (!therapistId) {
+      return next(new Error("لطفا مراجع مورد نظر خود را انتخاب کنید"), {
+        statusCode: 400,
+      });
+    }
+    const listDefAppointments = await DefAppointments.find({ therapistId});
+
+    res.status(201).json(listDefAppointments);
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function EditDefAppointment(req, res, next) {
   try {
     const {
