@@ -10,6 +10,8 @@ import transaction from "../models/transaction.js";
 import priceCache from "../utils/priceCache.js";
 import ServicePrice from "../models/ServicePrice.js";
 import message from "../models/message.js";
+import { log } from "console";
+
 
 export async function AddAppointment(req, res, next) {
   try {
@@ -590,59 +592,381 @@ export async function PublishDailyFromDefPlan(req, res, next) {
 }
 
 export async function AddGroup(req, res, next) {
-try {
-   const {
-
+  try {
+    const {
       groupSession,
-      
       start,
       duration,
-      
       title,
       room,
       notes,
       patientFee,
       category,
       description,
-
+     
     } = req.body;
- const startDT = DateTime.fromISO(start, { zone: "Asia/Tehran" });
+
+    console.log(req.body);
+    
+    
+    const startDT = DateTime.fromISO(start, { zone: "Asia/Tehran" });
     const endDT = startDT.plus({ minutes: duration });
     const localDay = startDT.toFormat("yyyy-MM-dd");
     const createdBy = req.user.Id;
-    console.log(startDT);
+
+    // بررسی تداخل برای تمام بیماران
+    for (const patientId of groupSession.patients) {
+      const apps = await Appointment.find({
+        patientId: patientId,
+        localDay: localDay
+      });
+      
+      for (const app of apps) {
+        try {
+          ConflictRole(startDT, endDT, app.start, app.end);
+        } catch (error) {
+         
+          const patientName = app.patientName
+          
+          return res.status(402).json({
+            success: false,
+            message: ` مراجع ${patientName} در زمان مورد نظر کلاس دیگری دارد`
+          });
+        }
+      }
+    }
+
+    // بررسی تداخل برای تمام درمانگران
+    for (const therapistId of groupSession.therapists) {
+      const apps = await Appointment.find({
+        therapistId: therapistId.therapistId,
+        localDay: localDay
+      });
+      
+      for (const app of apps) {
+        try {
+          ConflictRole(startDT, endDT, app.start, app.end);
+        } catch (error) {
+        
+          const therapistName = app.therapistName
+          
+          return res.status(402).json({
+            success: false,
+            message: ` درمانگر ${therapistName} در زمان مورد نظر کلاس دیگری دارد`
+          });
+        }
+      }
+    }
+    let finalPatientFee = patientFee;
+    if (!finalPatientFee && groupSession?.onePatientFee) {
+      finalPatientFee = groupSession.onePatientFee * newPatients.length;
+    }
+
+let therapistShare=0
+groupSession.therapists.map(t=>therapistShare+=t.therapistShare)
+const clinicShare=finalPatientFee-therapistShare
+    // اگر به اینجا رسیدیم یعنی هیچ تداخلی نیست
+    const NewGroup = await Appointment.create({
+      sessionType: "group",
+      start: startDT,
+      end: endDT,
+      duration,
+      localDay,
+      type: "session",
+      status_clinic: "scheduled",
+      role: "therapist",
+      description: category,
+      room,
+      createdBy,
+      groupSession,
+      patientFee,
+      notes,
+      clinicShare,
+      therapistShare
+    });
+console.log(NewGroup);
+
+    const MakedGroup = await NewGroup.save();
+
+    res.status(200).json({
+      success: true,
+      message: "کلاس گروهی با موفقیت ثبت شد!",
+      MakedGroup
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+const checkGroupConflicts = async (startDT, endDT, localDay, patients, therapists, excludeAppointmentId = null) => {
+  const conflicts = {
+    patients: [],
+    therapists: []
+  };
+
+  // فیلتر برای حذف appointment فعلی از بررسی تداخل
+  const filter = { localDay };
+  if (excludeAppointmentId) {
+    filter._id = { $ne: excludeAppointmentId };
+  }
+
+  // بررسی تداخل برای بیماران
+  for (const patientId of patients) {
+    const patientApps = await Appointment.find({
+      ...filter,
+      $or: [
+        { patientId: patientId },
+        { 'groupSession.patients': patientId }
+      ]
+    });
+
+    for (const app of patientApps) {
+      const appStart = DateTime.fromJSDate(app.start);
+      const appEnd = DateTime.fromJSDate(app.end);
+      
+      // بررسی تداخل زمانی
+      if (
+        (startDT < appEnd && endDT > appStart) ||
+        (appStart < endDT && appEnd > startDT)
+      ) {
+ 
+        const patientName = app.patientName
+        
+        conflicts.patients.push({
+          patientId,
+          patientName,
+          conflictAppointment: {
+            id: app._id,
+            title: app.title || app.patientName || 'جلسه درمانی',
+            time: `${moment(app.start).format('HH:mm')}-${moment(app.end).format('HH:mm')}`,
+            therapistName: app.therapistName || 'درمانگر'
+          }
+        });
+        break; // نیازی به ادامه چک کردن جلسات دیگر این بیمار نیست
+      }
+    }
+  }
+
+  // بررسی تداخل برای درمانگران
+  for (const therapistId of therapists) {
+    const therapistApps = await Appointment.find({
+      ...filter,
+      $or: [
+        { therapistId: therapistId },
+        { 'groupSession.therapists': {therapistId} }
+      ]
+    });
+
+    for (const app of therapistApps) {
+      const appStart = DateTime.fromJSDate(app.start);
+      const appEnd = DateTime.fromJSDate(app.end);
+      
+      // بررسی تداخل زمانی
+      if (
+        (startDT < appEnd && endDT > appStart) ||
+        (appStart < endDT && appEnd > startDT)
+      ) {
+
+        const therapistName =app.therapistName
+        
+        conflicts.therapists.push({
+          therapistId,
+          therapistName,
+          conflictAppointment: {
+            id: app._id,
+            title: app.title || app.patientName || 'جلسه درمانی',
+            time: `${moment(app.start).format('HH:mm')}-${moment(app.end).format('HH:mm')}`,
+            patientName: app.patientName || 'مراجع'
+          }
+        });
+        break; // نیازی به ادامه چک کردن جلسات دیگر این درمانگر نیست
+      }
+    }
+  }
+
+  return conflicts;
+};
+
+export async function updateGroup(req, res, next) {
+  try {
+   
     
+    const { groupId } = req.params;
+    const {
+      groupSession,
+      start,
+      duration,
+      title,
+      room,
+      notes,
+      patientFee,
+      category,
+      description,
+      status_clinic,
+      status_therapist
+    } = req.body.payload;
 
-const NewGroup=await Appointment.create({
-  sessionType:"group",
-  start:startDT,
-  end:endDT,
-  duration,
-  localDay,
-  type:"session",
-  status_clinic:"scheduled",
-  role:"therapist",
-  description:category,
-  room,
-  createdBy,
-  groupSession,
-  patientFee,
-  notes,
-   clinicShare:patientFee/2,
-   therapistShare:patientFee/2
+    
+console.log(groupSession);
 
-})
-const MakedGroup=await NewGroup.save()
 
-  res.status(200).json({
-    message:"کلاس گروهی با موفقیت ثبت شد!",
-    MakedGroup
-  })
-} catch (error) {
-  next(error)
+    // 1. پیدا کردن جلسه گروهی موجود
+    const existingGroup = await Appointment.findById(groupId);
+    
+    if (!existingGroup) {
+      return res.status(404).json({
+        success: false,
+        message: "کلاس گروهی یافت نشد"
+      });
+    }
+
+    if (existingGroup.sessionType !== "group") {
+      return res.status(400).json({
+        success: false,
+        message: "این جلسه یک کلاس گروهی نیست"
+      });
+    }
+
+    // 2. تبدیل تاریخ‌ها
+    const startDT = start ? DateTime.fromISO(start, { zone: "Asia/Tehran" }) : DateTime.fromJSDate(existingGroup.start);
+    const endDT = startDT.plus({ minutes: duration || existingGroup.duration });
+    const localDay = startDT.toFormat("yyyy-MM-dd");
+
+    // 3. اگر درمانگران یا بیماران تغییر کرده‌اند، بررسی تداخل
+    const newPatients = groupSession?.patients || existingGroup.groupSession.patients;
+    const newTherapists = groupSession?.therapists.map(t=> t.therapistId) || existingGroup.groupSession.therapists.map(t=> t.therapistId);
+
+    // بررسی تداخل (به جز خود این جلسه)
+    const conflicts = await checkGroupConflicts(
+      startDT,
+      endDT,
+      localDay,
+      newPatients,
+      newTherapists,
+      groupId // حذف این جلسه از بررسی تداخل
+    );
+
+    // 4. اگر تداخل وجود دارد، خطا برگردان
+    if (conflicts.patients.length > 0 || conflicts.therapists.length > 0) {
+      let errorMessage = "تداخل زمانی:\n";
+      
+      if (conflicts.patients.length > 0) {
+        errorMessage += "تداخل بیماران:\n";
+        conflicts.patients.forEach(conflict => {
+          errorMessage += `• بیمار ${conflict.patientName} با جلسه ${conflict.conflictAppointment.title} (${conflict.conflictAppointment.time})\n`;
+        });
+      }
+      
+      if (conflicts.therapists.length > 0) {
+        errorMessage += "\nتداخل درمانگران:\n";
+        conflicts.therapists.forEach(conflict => {
+          errorMessage += `• درمانگر ${conflict.therapistName} با جلسه ${conflict.conflictAppointment.title} (${conflict.conflictAppointment.time})\n`;
+        });
+      }
+
+      return res.status(402).json({
+        success: false,
+        message: errorMessage.trim(),
+        conflicts
+      });
+    }
+
+    // 5. محاسبه هزینه جدید (اگر تغییر کرده)
+    let finalPatientFee = patientFee;
+    if (!finalPatientFee && groupSession?.onePatientFee) {
+      finalPatientFee = groupSession.onePatientFee * newPatients.length;
+    }
+const createdBy = req.user.Id;
+let therapistShare=0
+groupSession.therapists.map(t=>therapistShare+=t.therapistShare)
+const clinicShare=finalPatientFee-therapistShare
+    // 6. آپدیت جلسه گروهی
+    const updatedGroup = {
+      sessionType: "group",
+      start: startDT,
+      end: endDT,
+      duration,
+      localDay,
+      type: "session",
+      status_clinic: "scheduled",
+      role: "therapist",
+      description: category,
+      room,
+      createdBy,
+      groupSession,
+      patientFee,
+      notes,
+      clinicShare ,
+      therapistShare
+    }
+  
+ const result=await Appointment.findByIdAndUpdate(groupId,updatedGroup)
+ await result.save()
+    res.status(200).json({
+      success: true,
+      message: "کلاس گروهی با موفقیت ویرایش شد",
+      updatedGroup:{...updatedGroup,_id:groupId}
+    });
+
+  } catch (error) {
+    console.error("Error updating group session:", error);
+    next(error);
+  }
 }
 
 
 
-     
+export async function payOneOfGroup(req,res,next){
+  try {
+    const {id,patientId,note,payment}=req.body
+
+    let ExistApp=await Appointment.findById(id)
+let lastPaids=[]
+    if(ExistApp.Paids.length>0){
+      lastPaids=ExistApp.Paids.filter(item=>item.id!=patientId)
+    }
+
+    lastPaids.push({
+      id:patientId,
+      note,
+      payment
+    })
+    if(lastPaids.length==ExistApp.groupSession.patients.length){
+      ExistApp.status_clinic="completed-paid"
+    }
+
+    ExistApp.Paids=lastPaids
+    const result=await ExistApp.save()
+    res.status(200).json({
+      success:true
+      ,result})
+
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function UnpayOneOfGroup(req,res,next){
+  try {
+    const {id,patientId,}=req.body
+
+    let ExistApp=await Appointment.findById(id)
+     let NewPAIds=ExistApp.Paids.filter(item=>item.id!=patientId)
+
+
+ 
+  
+      ExistApp.status_clinic="completed-notpaid"
+    
+
+    ExistApp.Paids=NewPAIds
+    const result=await ExistApp.save()
+    res.status(200).json({
+      success:true
+      ,result})
+
+  } catch (error) {
+    next(error)
+  }
 }

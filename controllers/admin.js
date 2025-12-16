@@ -26,6 +26,7 @@ import DefAppointments from "../models/DefAppointments.js";
 import message from "../models/message.js";
 import mongoose from "mongoose";
 import archievePatient from "../models/archievePatient.js";
+import Appointment from "../models/Appointment.js";
 
 
 
@@ -1178,4 +1179,23 @@ export async function destroytherapist(req, res, next) {
   } catch (error) {
     next(error)
   }
+}
+
+export async function GetAppDetails(req, res, next) {
+try {
+
+    const{appointmentId}=req.query
+
+
+    const ExistApp=await Appointment.findById(appointmentId).populate("groupSession.therapists.therapistId  groupSession.patients")
+    if(!ExistApp){
+      next(new Error("جلسه ی مورد نظر یافت نشد",{
+        statusCode:404
+      })) 
+    }
+    res.status(200).json(ExistApp)
+} catch (error) {
+  next(error)
+}
+
 }

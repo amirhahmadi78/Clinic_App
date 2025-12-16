@@ -53,6 +53,10 @@ const appointmentSchema = new Schema(
       enum: ["card", "transfer", "cash", "wallet", "0"],
       default: "0",
     },
+    bimeh:{type:Boolean
+      ,default:false
+    }
+    ,
     sessionType: {
       type: String,
       enum: ["individual", "group"],
@@ -77,22 +81,46 @@ const appointmentSchema = new Schema(
       },
     },
 
-    therapistName: { type: String, required: function () {
-        return this.sessionType === "individual"}},
+    therapistName: {
+      type: String,
+      required: function () {
+        return this.sessionType === "individual";
+      },
+    },
 
-    patientName: { type: String, required: function () {
-        return this.sessionType === "individual" }},
-  
+    patientName: {
+      type: String,
+      required: function () {
+        return this.sessionType === "individual";
+      },
+    },
+
     groupSession: {
-      therapists: [
-        {
-          type: Schema.Types.ObjectId,
-          ref: "therapist",
-          required: function () {
-            return this.sessionType === "group";
-          },
-        },
-      ],
+      therapists:
+         [
+    {
+      therapistId: {
+        type: Schema.Types.ObjectId,
+        ref: "therapist",
+        required: function () {
+          return this.sessionType === "group";
+        }
+      },
+      percentage: {
+        type: Number,
+        min: 0,
+        max: 100,
+        default: 0
+      },
+      therapistShare:{
+        type: Number,
+        required: function () {
+          return this.sessionType === "group";
+        }
+      }
+    }
+  ],
+      
       patients: [
         {
           type: Schema.Types.ObjectId,
@@ -106,21 +134,33 @@ const appointmentSchema = new Schema(
         type: Number,
         required: function () {
           return this.sessionType === "group";
-        }
-      
+        },
       },
-      
     },
-     description: {
-        type: String,
-        required: function () {
-          return this.sessionType === "group";
-        }
-      
-      }
+    description: {
+      type: String,
+      required: function () {
+        return this.sessionType === "group";
+      },
+    },
+    Paids: [
+      {
+        id: { type: Schema.Types.ObjectId },
+        payment: {
+          type: String,
+          enum: ["card", "transfer", "cash"],
+          default:"card"
+        },
+        note:{type:String}
+      },
+    ],
   },
 
   { timestamps: true }
 );
+
+
+
+
 
 export default mongoose.model("appointment", appointmentSchema);

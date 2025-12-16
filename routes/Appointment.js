@@ -11,6 +11,9 @@ import {
   EditAppointmen,
   PublishDailyFromDefPlan,
   AddGroup,
+  updateGroup,
+  payOneOfGroup,
+  UnpayOneOfGroup,
 } from "../controllers/Appointment.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
 
@@ -18,6 +21,7 @@ router.post("/appointment/add", requireAuth, csrfGuard, AddAppointment);
 
 router.post("/appointment/addgroup", requireAuth, csrfGuard, AddGroup);
 
+router.post("/appointment/updategroup/:groupId",requireAuth,csrfGuard,updateGroup)
 
 router.get(
   "/appointment/dailytherapist",
@@ -45,4 +49,8 @@ router.post("/appointment/editappointment",requireAuth,csrfGuard,EditAppointmen)
 
 router.post("/appointment/publish",requireAuth,csrfGuard,PublishDailyFromDefPlan);
 
+router.post("/appointment/payone",requireAuth,csrfGuard,payOneOfGroup)
+
+
+router.post("/appointment/unpayone",requireAuth,csrfGuard,UnpayOneOfGroup)
 export default router;
