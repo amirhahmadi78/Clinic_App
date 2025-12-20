@@ -79,6 +79,12 @@ const PatientSchema = new Schema(
       required: true,
       default: "naghd",
     },
+    bimehKind:{
+      type:String,
+      required: function () {
+        return this.paymentType === "bimeh";
+      }
+    },
     discountPercent: {
       type: Number,
     },
@@ -94,15 +100,6 @@ const PatientSchema = new Schema(
     },
     workDays: {
       type: [workDaySchema],
-      // default: [
-      //   { day: "Saturday", defaultAppointments: [] },
-      //   { day: "Sunday", defaultAppointments: [] },
-      //   { day: "Monday", defaultAppointments: [] },
-      //   { day: "Tuesday", defaultAppointments: [] },
-      //   { day: "Wednesday", defaultAppointments: [] },
-      //   { day: "Thursday", defaultAppointments: [] },
-      //   { day: "Friday", defaultAppointments: [] },
-      // ],
     },
     introducedBy: { type: mongoose.Schema.Types.ObjectId, ref: "therapist" },
     refreshTokens: {

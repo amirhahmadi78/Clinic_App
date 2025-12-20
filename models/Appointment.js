@@ -53,6 +53,7 @@ const appointmentSchema = new Schema(
       enum: ["card", "transfer", "cash", "wallet", "0"],
       default: "0",
     },
+  
     bimeh:{type:Boolean
       ,default:false
     }

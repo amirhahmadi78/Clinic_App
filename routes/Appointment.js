@@ -14,6 +14,7 @@ import {
   updateGroup,
   payOneOfGroup,
   UnpayOneOfGroup,
+  AppointmentSearch,
 } from "../controllers/Appointment.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
 
@@ -51,6 +52,8 @@ router.post("/appointment/publish",requireAuth,csrfGuard,PublishDailyFromDefPlan
 
 router.post("/appointment/payone",requireAuth,csrfGuard,payOneOfGroup)
 
+
+router.get("/appointment", requireAuth, csrfGuard, AppointmentSearch);
 
 router.post("/appointment/unpayone",requireAuth,csrfGuard,UnpayOneOfGroup)
 export default router;

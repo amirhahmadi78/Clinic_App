@@ -970,3 +970,109 @@ export async function UnpayOneOfGroup(req,res,next){
     next(error)
   }
 }
+
+// AppointmentSearch.js
+export async function AppointmentSearch(req, res, next) {
+  try {
+
+
+    
+    const payload = req.query;
+    const query = {};
+    console.log(payload);
+    
+    // جستجوی متن برای نام مراجع و درمانگر
+    if (payload.patientName) {
+      query.patientName = { $regex: payload.patientName, $options: 'i' };
+    }
+    
+    if (payload.therapistName) {
+      query.therapistName = { $regex: payload.therapistName, $options: 'i' };
+    }
+    
+    // جستجوی بازه تاریخ
+    if (payload.startDate && payload.endDate) {
+      payload.startDate.trim()
+      payload.endDate.trim()
+      query.localDay = {
+        $gte: payload.startDate,
+        $lte: payload.endDate
+      };
+    } else if (payload.startDate) {
+      query.localDay = { $gte: payload.startDate };
+    } else if (payload.endDate) {
+      query.localDay = { $lte: payload.endDate };
+    }
+    
+    // سایر فیلترها
+    if (payload.status_clinic) query.status_clinic = payload.status_clinic;
+    if (payload.payment) query.payment = payload.payment;
+    if (payload.type) query.type = payload.type;
+    if (payload.sessionType) query.sessionType = payload.sessionType;
+    if (payload.room) query.room = payload.room;
+    if (payload.bimeh) query.bimeh = payload.bimeh === 'true';
+    
+    // جستجوی بازه مبلغ
+    if (payload.minAmount || payload.maxAmount) {
+      query.patientFee = {};
+      if (payload.minAmount) query.patientFee.$gte = Number(payload.minAmount);
+      if (payload.maxAmount) query.patientFee.$lte = Number(payload.maxAmount);
+    }
+        
+
+    // بک‌اند - یکباره همه آمار رو محاسبه کن
+const stats = await Appointment.aggregate([
+  { $match: query },
+  {
+    $group: {
+      _id: null,
+      totalAmount: { $sum: "$patientFee" },
+      totalClinicShare: { $sum: "$clinicShare" },
+      totalTherapistShare: { $sum: "$therapistShare" },
+      paidAmount: { 
+        $sum: { 
+          $cond: [{ $eq: ["$status_clinic", "completed-paid"] }, "$patientFee", 0] 
+        }
+      },
+            totalBimeh: { 
+        $sum: { 
+          $cond: [{ $eq: ["$status_clinic", "bimeh"] }, "$patientFee", 0] 
+        }
+      },
+      totalNot:{    $sum: { 
+          $cond: [{ $eq: ["$status_clinic", "completed-notpaid"] }, "$patientFee", 0] 
+        }
+
+      },
+       totalNotBimeh:{    $sum: { 
+          $cond: [
+            {
+        $and: [
+          { $eq: ["$status_clinic", "bimeh"] },  
+          { $eq: ["$bimeh", false] }             
+        ]
+      }
+            , "$patientFee", 0] 
+        }
+
+      },
+      count: { $sum: 1 }
+    }
+  }
+]);
+
+const Amar=stats
+    const AppList = await Appointment.find(query)
+      .sort({ localDay: -1 }) // مرتب‌سازی از جدیدترین به قدیمی
+      .limit(100); // محدودیت تعداد نتایج
+    
+    res.status(200).json({AppList,Amar});
+    
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ 
+      message: "خطا در جستجوی اطلاعات",
+      error: error.message 
+    });
+  }
+}
