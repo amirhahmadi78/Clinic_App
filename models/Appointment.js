@@ -50,12 +50,19 @@ const appointmentSchema = new Schema(
     pay_details: { type: String },
     payment: {
       type: String,
-      enum: ["card", "transfer", "cash", "wallet", "0"],
+      enum: ["card", "transfer", "cash", "wallet", "0","bimeh"],
       default: "0",
     },
   
-    bimeh:{type:Boolean
-      ,default:false
+    insuranceContract: {
+      type: Schema.Types.ObjectId,
+      ref: "InsuranceContract",
+      default: null,
+    },
+    insuranceShare: { type: Number, default: 0 },
+    bimeh: {
+      type: Boolean,
+      default: false,
     }
     ,
     sessionType: {

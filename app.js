@@ -64,9 +64,11 @@ app.use(patientRoute);
 app.use(messageRoute);
 app.use(exerciseRoute);
 app.use(noteBookRoute)
+import insuranceRoutes from "./routes/insuranceRoutes.js";
 app.use(DefAppointmentRoute)
 app.use(transactionRoute)
 app.use(priceroute)
+app.use("/api/insurance", insuranceRoutes)
 
 app.use((error, req, res, next) => {
   console.error(error); 
