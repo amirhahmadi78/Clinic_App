@@ -54,17 +54,10 @@ const appointmentSchema = new Schema(
       default: "0",
     },
   
-    insuranceContract: {
-      type: Schema.Types.ObjectId,
-      ref: "InsuranceContract",
-      default: null,
-    },
-    insuranceShare: { type: Number, default: 0 },
     bimeh: {
       type: Boolean,
       default: false,
-    }
-    ,
+    },
     sessionType: {
       type: String,
       enum: ["individual", "group"],

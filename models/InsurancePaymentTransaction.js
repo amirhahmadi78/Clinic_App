@@ -9,20 +9,15 @@ const insurancePaymentTransactionSchema = new Schema(
       ref: "InsuranceContract",
       required: true,
     },
-    amount: { type: Number, required: true }, // Total amount received for this payment
+    amount: { type: Number, required: true }, // Amount received for this payment
     date: { type: Date, required: true }, // Date payment was received
     reference: { type: String }, // Payment reference number
     description: { type: String },
-    coveredAppointments: [
-      {
-        appointmentId: {
-          type: Schema.Types.ObjectId,
-          ref: "appointment",
-          required: true,
-        },
-        insuranceShare: { type: Number, required: true }, // The insurance share for this specific appointment within this payment
-      },
-    ],
+    paymentType: {
+      type: String,
+      enum: ["partial", "full", "advance"],
+      default: "partial",
+    },
     status: {
       type: String,
       enum: ["recorded", "pending_verification", "rejected"],

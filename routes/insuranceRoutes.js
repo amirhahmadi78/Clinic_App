@@ -10,7 +10,7 @@ import {
 } from "../controllers/insuranceController.js";
 
 import {
-  getAppointmentsForInsurancePayment,
+  getInsuranceContractsForPayment,
   recordInsurancePayment,
   getInsurancePaymentReports,
 } from "../controllers/insurancePaymentController.js";
@@ -23,7 +23,7 @@ router.route("/contracts").post(csrfGuard, requireAuth, createInsuranceContract)
 router.route("/contracts/:id").put(csrfGuard, requireAuth, updateInsuranceContract);
 router.route("/contracts/:id").delete(csrfGuard, requireAuth, deleteInsuranceContract);
 
-router.route("/payments/appointments").get(csrfGuard, requireAuth, getAppointmentsForInsurancePayment);
+router.route("/payments/contracts").get(csrfGuard, requireAuth, getInsuranceContractsForPayment);
 router.route("/payments").post(csrfGuard, requireAuth, recordInsurancePayment);
 router.route("/reports").get(csrfGuard, requireAuth, getInsurancePaymentReports);
 

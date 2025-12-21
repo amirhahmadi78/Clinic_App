@@ -20,6 +20,8 @@ const insuranceContractSchema = new Schema(
     discountRate: { type: Number, min: 0, max: 100, default: 0 },
     lastPaymentDate: { type: Date }, // Date of last payment received from this insurance
     totalPaidAmount: { type: Number, default: 0 }, // Total amount ever paid by this insurance
+    totalDebtAmount: { type: Number, default: 0 }, // Total debt owed by insurance (calculated from services)
+    currentBalance: { type: Number, default: 0 }, // currentBalance = totalPaidAmount - totalDebtAmount
   },
   { timestamps: true }
 );

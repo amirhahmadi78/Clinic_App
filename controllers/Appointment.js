@@ -551,7 +551,14 @@ export async function PublishDailyFromDefPlan(req, res, next) {
        let therapistShare
        let clinicShare
        if(appointmentData.patientFee==null||!appointmentData.patientFee){
-        patientFee=basePrice
+         if(appointmentData.type=="break"||appointmentData.type=="lunch"){
+   
+            
+               patientFee=0
+        therapistShare=0
+        clinicShare=0
+          }else{
+ patientFee=basePrice
         if(PatientExist.introducedBy==TherapistExist._id){
           therapistShare=Math.round(basePrice*TherapistExist.percentIntroduced/100)
         }else{
@@ -559,10 +566,18 @@ export async function PublishDailyFromDefPlan(req, res, next) {
         }
         
         clinicShare=patientFee-therapistShare
+          }
+       
        }else{
-       patientFee=appointmentData.patientFee
+
+         
+             patientFee=appointmentData.patientFee
         therapistShare=appointmentData.therapistShare
         clinicShare=appointmentData.clinicShare
+          
+
+
+  
        }
        
       delete appointmentData.patientFee;
@@ -570,9 +585,9 @@ export async function PublishDailyFromDefPlan(req, res, next) {
       delete appointmentData.clinicShare
       const result = new Appointment({
         ...appointmentData,
-        patientFee,
-        therapistShare,
-        clinicShare,
+        patientFee:patientFee,
+        therapistShare:therapistShare,
+        clinicShare:clinicShare,
         start: startDt.toJSDate(),
         localDay: Day,
         end: endDt.toJSDate(),
