@@ -17,10 +17,14 @@ export const getAllInsuranceContracts = async (req, res) => {
 // @access  Private (Admin)
 export const getInsuranceContractById = async (req, res) => {
   try {
+    console.log("shod");
+    
     const contract = await InsuranceContract.findById(req.params.id);
     if (!contract) {
       return res.status(404).json({ message: "Insurance contract not found" });
     }
+
+    
     res.status(200).json(contract);
   } catch (error) {
     res.status(500).json({ message: error.message });

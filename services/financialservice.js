@@ -168,31 +168,101 @@ export async function monthFinancialOfTherapist(therapistId, startDay, endDay) {
   }
 }
 
-export async function FindAllFinancial(query) {
-  let AllFinancial = [];
-  let TotalFinancial = 0;
-  let TotalClinic = 0;
-  let TotalTherapist = 0;
+export async function FindAllFinancial(query, page = 1, limit = 20) {
+  // فیلترهای پایه
   query.status_clinic = {
     $in: ["completed-notpaid", "completed-paid", "bimeh"],
   };
-  const financials = await Appointment.find(query);
-  if (financials.length === 0) {
-    const error = new Error("تراکنش مالی  در بازه مورد نظر وجود  ندارد");
-    error.statusCode = 404;
-    throw error;
-  }
-  for (const OneFinancial of financials) {
-    AllFinancial.push(OneFinancial);
-    TotalFinancial += OneFinancial.patientFee;
-    TotalClinic += OneFinancial.clinicShare;
-    TotalTherapist += OneFinancial.therapistShare;
-  }
+console.log("injas");
+
+  // شمارش کل رکوردها برای آمار
+  const totalRecords = await Appointment.countDocuments(query);
+
+  // محاسبه آمار کلی با aggregation (بهینه‌تر از حلقه)
+  const statsResult = await Appointment.aggregate([
+    { $match: query },
+    {
+      $group: {
+        _id: null,
+        totalAmount: { $sum: "$patientFee" },
+        totalClinicShare: { $sum: "$clinicShare" },
+        totalTherapistShare: { $sum: "$therapistShare" },
+        totalBimeh: {
+          $sum: {
+            $cond: {
+              if: { $eq: ["$status_clinic", "bimeh"] },
+              then: "$patientFee",
+              else: 0
+            }
+          }
+        },
+        totalNot: {
+          $sum: {
+            $cond: {
+              if: { $eq: ["$status_clinic", "completed-notpaid"] },
+              then: "$patientFee",
+              else: 0
+            }
+          }
+        },
+        totalIncome: {
+          $sum: {
+            $cond: [
+              { $or: [
+                { $eq: ["$status_clinic", "completed-paid"] },
+                { $eq: ["$status_clinic", "completed-notpaid"] },
+                { $eq: ["$status_clinic", "bimeh"] }
+              ] },
+              "$patientFee",
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]);
+
+  const stats = statsResult[0] || {
+    totalAmount: 0,
+    totalClinicShare: 0,
+    totalTherapistShare: 0,
+    totalBimeh: 0,
+    totalNot: 0,
+    totalIncome: 0
+  };
+
+  // اعمال پیجینیشن با MongoDB skip و limit
+  const skip = (page - 1) * limit;
+  const financials = await Appointment.find(query)
+    .sort({ start: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  // آمار پیجینیشن
+  const totalPages = Math.ceil(totalRecords / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
   return {
-    AllFinancial,
-    TotalFinancial,
-    TotalClinic,
-    TotalTherapist,
+    AppList: financials,
+    Amar: [{
+      count: totalRecords,
+      totalAmount: stats.totalAmount,
+      totalClinicShare: stats.totalClinicShare,
+      totalTherapistShare: stats.totalTherapistShare,
+      totalBimeh: stats.totalBimeh,
+      totalNot: stats.totalNot,
+      totalIncome: stats.totalIncome,
+      paidAmount: stats.totalAmount - stats.totalNot
+    }],
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      hasNextPage,
+      hasPrevPage,
+      limit
+    }
   };
 }
 

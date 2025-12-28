@@ -1,17 +1,19 @@
-
-
 import Appointment from "../models/Appointment.js";
 import financial from "../models/financial.js";
 import therapist from "../models/therapist.js";
 import { addFinancial,dailyFinancialOfTherapist,monthFinancialOfTherapist } from "../services/financialservice.js";
-import {serviceDailyLeaveRequest,serviceHourlyLeaveRequest} from "../services/leaveRequestService.js"
+// import {serviceDailyLeaveRequest,serviceHourlyLeaveRequest} from "../services/leaveRequestService.js" // Removed old service imports
 import LeaveRequest from "../models/LeaveRequest.js";
 import { DeleteAtChangeStatus } from "../services/appointment.js";
 import message from "../models/message.js";
+import Exercise from "../models/Exercise.js"; // Re-added Exercise import
+import { log } from "console";
+
 export async function ShowPatients(req, res, next) {
   try {
-    const therapistId = req.userId || req.params.therapistId;
-
+    const therapistId = req.user.id; // Get therapist ID from authenticated user
+    console.log(therapistId);
+    
     const OneTherapist = await therapist
       .findById(therapistId)
       .populate("patients");
@@ -128,68 +130,272 @@ export async function writeReport(req,res,next){
   }
 }
 
-export async function postDailyLeaveRequest(req,res,next){
+export async function createLeaveRequest(req, res, next) {
   try {
-     const{userId,startDay,endDay,text}=req.body
-        // if (userId!==req.user.id){
-        //     const error=new Error("خطای دسترسی! در خواست مرخصی با با مشخصات یوزر مطابقت ندارد")
-        //     error.statusCode=403
-        //     return next(error) 
-        // } felan
-        if(!userId||!startDay||!endDay||!text){
-            const error=new Error("لطفا مقادیر ورودی را وارد نمایید")
-            error.statusCode=400
-            return next(error) 
-        }
-        const userType="therapist" //felan req.user.role
-        const LeaveRequestReport=await serviceDailyLeaveRequest(userId,startDay,endDay,text,userType)
-        res.status(201).json(LeaveRequestReport)
+    const therapistId = req.user.id;
+    const { type, startDate, endDate, startTime, endTime, reason } = req.body;
+
+    if (!type || !startDate || !reason) {
+      const error = new Error("لطفا تمام فیلدهای ضروری را وارد کنید.");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (type === 'hourly' && (!startTime || !endTime)) {
+      const error = new Error("برای مرخصی ساعتی، زمان شروع و پایان الزامی است.");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    const userType = req.user.modeluser;
+    const user = req.user.id;
+
+    // For daily leave requests, endDate should be provided
+    let leaveEndDate = endDate;
+    if (type === 'daily' && !endDate) {
+      leaveEndDate = startDate; // If no endDate provided for daily, use startDate
+    }
+
+    const newLeaveRequest = new LeaveRequest({
+      user: user,
+      userType: userType,
+      therapist: therapistId, // Keep for backward compatibility
+      type,
+      startDate,
+      endDate: leaveEndDate,
+      startTime: type === 'hourly' ? startTime : null,
+      endTime: type === 'hourly' ? endTime : null,
+      reason
+    });
+
+    const savedLeaveRequest = await newLeaveRequest.save();
+
+    res.status(201).json({
+      message: "درخواست مرخصی با موفقیت ثبت شد.",
+      leaveRequest: savedLeaveRequest,
+    });
   } catch (error) {
-    next(error)
+    console.error("Error creating leave request:", error);
+    error.statusCode = 500;
+    next(error);
   }
 }
 
-export async function postHourlyLeaveRequest(req,res,next){
+export async function deleteLeaveRequest(req, res, next) {
   try {
-     const{userId,startDate,endDate,localDay,text}=req.body
-        // if (userId!==req.user.id){
-        //     const error=new Error("خطای دسترسی! در خواست مرخصی با با مشخصات یوزر مطابقت ندارد")
-        //     error.statusCode=403
-        //     return next(error) 
-        // } felan
-        if(!userId||!startDate,!endDate,!text,!localDay){
-            const error=new Error("لطفا مقادیر ورودی را وارد نمایید")
-            error.statusCode=400
-            return next(error) 
-        }
-        const userType="therapist" //felan req.user.role
-        const LeaveRequestReport=await serviceHourlyLeaveRequest(userId,startDate,endDate,text,userType,localDay)
-        res.status(201).json(LeaveRequestReport)
+    const therapistId = req.user.id;
+    const { requestId } = req.params;
+
+    if (!requestId) {
+      const error = new Error("شناسه درخواست مرخصی الزامی است.");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // یافتن درخواست مرخصی
+    const leaveRequest = await LeaveRequest.findById(requestId);
+
+    if (!leaveRequest) {
+      const error = new Error("درخواست مرخصی یافت نشد.");
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // چک کردن اینکه درخواست متعلق به درمانگر فعلی باشد
+    if (leaveRequest.user.toString() !== therapistId) {
+      const error = new Error("شما اجازه حذف این درخواست را ندارید.");
+      error.statusCode = 403;
+      return next(error);
+    }
+
+    // چک کردن اینکه درخواست در حال بررسی باشد (pending)
+    if (leaveRequest.status !== 'pending') {
+      const error = new Error("فقط درخواست‌های در حال بررسی قابل حذف هستند.");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // حذف درخواست
+    await LeaveRequest.findByIdAndDelete(requestId);
+
+    res.status(200).json({
+      message: "درخواست مرخصی با موفقیت حذف شد.",
+    });
   } catch (error) {
-    next(error)
+    console.error("Error deleting leave request:", error);
+    error.statusCode = 500;
+    next(error);
   }
 }
 
-export async function ShowRequests(req,res,next) {
+export async function getTherapistLeaveRequests(req, res, next) {
   try {
-    const therapistId="68cbcb0a1a2aa06e0e151dd8"||req.user.id //fellan
-     if(!therapistId){
-            const error=new Error("لطفا برای دریافت نتیجه ی درخواست وارد حساب کاربری خود شوید")
-            error.statusCode=403
-            return next(error) 
-        }
-    const requests=await LeaveRequest.find({user:therapistId})
-     if(!requests){
-            const error=new Error("درخواستی وجود ندارد")
-            error.statusCode=404
-            return next(error) 
-        }
-        res.status(200).json({
-          message:"لیست درخواست ها",
-          requests
-        })
+    const therapistId = req.user.id;
+
+    const leaveRequests = await LeaveRequest.find({ therapist: therapistId })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "لیست درخواست‌های مرخصی درمانگر",
+      leaveRequests,
+    });
   } catch (error) {
-    next(error)
+    console.error("Error fetching leave requests:", error);
+    error.statusCode = 500;
+    next(error);
   }
-  
+}
+
+// Exercise Controllers
+export async function uploadExercise(req, res, next) {
+  try {
+    const therapistId = req.user.id;
+    const { title, description, fileUrl, fileType } = req.body;
+
+    if (!title || !fileUrl) {
+      const error = new Error("عنوان و آدرس فایل تمرین الزامی است.");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    const newExercise = new Exercise({
+      therapist: therapistId,
+      title,
+      description,
+      fileUrl,
+      fileType,
+    });
+
+    const savedExercise = await newExercise.save();
+
+    res.status(201).json({
+      message: "تمرین با موفقیت آپلود شد.",
+      exercise: savedExercise,
+    });
+  } catch (error) {
+    console.error("Error uploading exercise:", error);
+    error.statusCode = 500;
+    next(error);
+  }
+}
+
+
+
+export async function getPatientStats(req, res, next) {
+  try {
+    const therapistId = req.user.id;
+    const { patientId } = req.params;
+
+    if (!patientId) {
+      const error = new Error("شناسه بیمار الزامی است");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // شمارش جلسات کامل شده
+    const sessionCount = await Appointment.countDocuments({
+      therapistId,
+      patientId,
+      status_therapist: "completed",
+      sessionType: "individual"
+    });
+
+    // یافتن آخرین جلسه کامل شده
+    const lastSession = await Appointment.findOne({
+      therapistId,
+      patientId,
+      status_therapist: "completed",
+      sessionType: "individual"
+    })
+    .sort({ start: -1 })
+    .select('start')
+    .limit(1);
+
+    const stats = {
+      sessionCount,
+      lastSessionDate: lastSession ? lastSession.start : null
+    };
+
+    res.status(200).json({
+      message: "آمار بیمار با موفقیت دریافت شد",
+      stats
+    });
+
+  } catch (error) {
+    console.error("Error fetching patient stats:", error);
+    error.statusCode = 500;
+    next(error);
+  }
+}
+
+
+export async function getTherapistExercises(req, res, next) {
+  try {
+    const therapistId = req.user.id;
+
+    const exercises = await Exercise.find({ therapist: therapistId })
+      .sort({ uploadedAt: -1 });
+
+    res.status(200).json({
+      message: "لیست تمرینات درمانگر",
+      exercises,
+    });
+  } catch (error) {
+    console.error("Error fetching exercises:", error);
+    error.statusCode = 500;
+    next(error);
+  }
+}
+
+export async function updateExercise(req, res, next) {
+  try {
+    const { exerciseId } = req.params;
+    const therapistId = req.user.id;
+    const { title, description, fileUrl, fileType } = req.body;
+
+    const updatedExercise = await Exercise.findOneAndUpdate(
+      { _id: exerciseId, therapist: therapistId },
+      { title, description, fileUrl, fileType },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedExercise) {
+      const error = new Error("تمرین یافت نشد یا شما اجازه ویرایش آن را ندارید.");
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    res.status(200).json({
+      message: "تمرین با موفقیت به روز شد.",
+      exercise: updatedExercise,
+    });
+  } catch (error) {
+    console.error("Error updating exercise:", error);
+    error.statusCode = 500;
+    next(error);
+  }
+}
+
+export async function deleteExercise(req, res, next) {
+  try {
+    const { exerciseId } = req.params;
+    const therapistId = req.user.id;
+
+    const deletedExercise = await Exercise.findOneAndDelete({ _id: exerciseId, therapist: therapistId });
+
+    if (!deletedExercise) {
+      const error = new Error("تمرین یافت نشد یا شما اجازه حذف آن را ندارید.");
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    res.status(200).json({
+      message: "تمرین با موفقیت حذف شد.",
+      exercise: deletedExercise,
+    });
+  } catch (error) {
+    console.error("Error deleting exercise:", error);
+    error.statusCode = 500;
+    next(error);
+  }
 }

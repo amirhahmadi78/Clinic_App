@@ -1,30 +1,50 @@
+import mongoose from 'mongoose';
 
-import mongoose from "mongoose"
-const Schema = mongoose.Schema;
-const LeaveRequestSchema = new Schema({
+const leaveRequestSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    refPath: "userType",
+    refPath: 'userType',
   },
   userType: {
     type: String,
     required: true,
-    enum: ["therapist", "admin"], 
+    enum: ['therapist', 'patient'],
   },
-
-  startDay:{ type: String },
-  endDay:{ type: String },
-  startDate: { type: String},
- 
-  endDate: { type: String },
-  localDay:{type: String},
-  text: { type: String },
+  therapist: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'therapist',
+  },
+  type: {
+    type: String,
+    enum: ['daily', 'hourly'],
+    required: true,
+  },
+  startDate: {
+    type: Date,
+    required: true,
+  },
+  endDate: {
+    type: Date,
+  },
+  startTime: {
+    type: String, // HH:mm format
+  },
+  endTime: {
+    type: String, // HH:mm format
+  },
+  reason: {
+    type: String,
+    required: true,
+  },
   status: {
     type: String,
-    enum: ["pending", "approved", "rejected"],
-    default: "pending",
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
   },
-},{timestamps:true});
+  adminNotes: {
+    type: String,
+  },
+}, { timestamps: true });
 
-export default mongoose.model("LeaveRequest", LeaveRequestSchema);
+export default mongoose.model('LeaveRequest', leaveRequestSchema);

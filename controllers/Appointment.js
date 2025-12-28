@@ -276,11 +276,11 @@ export async function DailyScheduleOfTherapist(req, res, next) {
       therapistId: req.user.id,
       localDay,
     });
-    if (appointments.length == 0) {
-      const error = new Error("برنامه ی درمانگر در این تاریخ خالی می باشد");
-      error.statusCode = 201;
-      return next(error);
-    }
+    // if (appointments.length == 0) {
+    //   const error = new Error("برنامه ی درمانگر در این تاریخ خالی می باشد");
+    //   error.statusCode = 201;
+    //   return next(error);
+    // }
     res.status(200).json({ appointments });
   } catch (err) {
     next(err);
@@ -301,11 +301,7 @@ export async function DailyScheduleOfPatient(req, res, next) {
       patientId: req.user.id,
       localDay,
     });
-    if (appointments.length == 0) {
-      const error = new Error("برنامه ی مراجع در این تاریخ خالی می باشد");
-      error.statusCode = 404;
-      return next(error);
-    }
+   
     res.status(200).json(appointments);
   } catch (error) {
     next(error);
@@ -989,53 +985,57 @@ export async function UnpayOneOfGroup(req,res,next){
 // AppointmentSearch.js
 export async function AppointmentSearch(req, res, next) {
   try {
-
-
-    
     const payload = req.query;
+    const { page = 1, limit = 20 } = payload;
     const query = {};
-    console.log(payload);
+    console.log("pppp",payload);
     
     // جستجوی متن برای نام مراجع و درمانگر
     if (payload.patientName) {
       query.patientName = { $regex: payload.patientName, $options: 'i' };
     }
-    
+
     if (payload.therapistName) {
       query.therapistName = { $regex: payload.therapistName, $options: 'i' };
     }
-    
+
     // جستجوی بازه تاریخ
     if (payload.startDate && payload.endDate) {
-      payload.startDate.trim()
-      payload.endDate.trim()
+      payload.startDate = payload.startDate.trim();
+      payload.endDate = payload.endDate.trim();
       query.localDay = {
         $gte: payload.startDate,
         $lte: payload.endDate
       };
     } else if (payload.startDate) {
-      query.localDay = { $gte: payload.startDate };
+      query.localDay = { $gte: payload.startDate.trim() };
     } else if (payload.endDate) {
-      query.localDay = { $lte: payload.endDate };
+      query.localDay = { $lte: payload.endDate.trim() };
     }
-    
+if(payload.insuranceType){
+  query.insuranceName=payload.insuranceType
+}
     // سایر فیلترها
-    if (payload.status_clinic) query.status_clinic = payload.status_clinic;
+    if (payload.status_clinic) {
+      query.status_clinic = payload.status_clinic;
+    } else {
+      // اگر کاربر فیلتری انتخاب نکرده، فقط جلسات مالی را نمایش بده
+      query.status_clinic = { $in: ["completed-notpaid", "completed-paid", "bimeh"] };
+    }
     if (payload.payment) query.payment = payload.payment;
     if (payload.type) query.type = payload.type;
     if (payload.sessionType) query.sessionType = payload.sessionType;
     if (payload.room) query.room = payload.room;
-    if (payload.bimeh) query.bimeh = payload.bimeh === 'true';
-    
+
     // جستجوی بازه مبلغ
     if (payload.minAmount || payload.maxAmount) {
       query.patientFee = {};
       if (payload.minAmount) query.patientFee.$gte = Number(payload.minAmount);
       if (payload.maxAmount) query.patientFee.$lte = Number(payload.maxAmount);
     }
-        
 
-    // بک‌اند - یکباره همه آمار رو محاسبه کن
+    // محاسبه آمار کلی
+// بخش aggregate را به این صورت اصلاح کنید:
 const stats = await Appointment.aggregate([
   { $match: query },
   {
@@ -1044,45 +1044,75 @@ const stats = await Appointment.aggregate([
       totalAmount: { $sum: "$patientFee" },
       totalClinicShare: { $sum: "$clinicShare" },
       totalTherapistShare: { $sum: "$therapistShare" },
-      paidAmount: { 
-        $sum: { 
-          $cond: [{ $eq: ["$status_clinic", "completed-paid"] }, "$patientFee", 0] 
-        }
-      },
-            totalBimeh: { 
-        $sum: { 
-          $cond: [{ $eq: ["$status_clinic", "bimeh"] }, "$patientFee", 0] 
-        }
-      },
-      totalNot:{    $sum: { 
-          $cond: [{ $eq: ["$status_clinic", "completed-notpaid"] }, "$patientFee", 0] 
-        }
-
-      },
-       totalNotBimeh:{    $sum: { 
+      totalIncome: {
+        $sum: {
           $cond: [
-            {
-        $and: [
-          { $eq: ["$status_clinic", "bimeh"] },  
-          { $eq: ["$bimeh", false] }             
-        ]
-      }
-            , "$patientFee", 0] 
+            { 
+              $in: [
+                "$status_clinic", 
+                ["completed-notpaid", "completed-paid", "bimeh"]
+              ] 
+            },
+            "$patientFee",
+            0
+          ]
         }
-
+      },
+      paidAmount: {
+        $sum: {
+          $cond: [
+            { 
+              $in: [
+                "$status_clinic", 
+                ["completed-paid"]
+              ] 
+            },
+            "$patientFee",
+            0
+          ]
+        }
+      },
+      totalBimeh: {
+        $sum: {
+          $cond: [{ $eq: ["$status_clinic", "bimeh"] }, "$patientFee", 0]
+        }
+      },
+      totalNot: {
+        $sum: {
+          $cond: [{ $eq: ["$status_clinic", "completed-notpaid"] }, "$patientFee", 0]
+        }
       },
       count: { $sum: 1 }
     }
   }
 ]);
 
-const Amar=stats
+    // اعمال پیجینیشن
+    const skip = (page - 1) * limit;
     const AppList = await Appointment.find(query)
-      .sort({ localDay: -1 }) // مرتب‌سازی از جدیدترین به قدیمی
-      .limit(100); // محدودیت تعداد نتایج
-    
-    res.status(200).json({AppList,Amar});
-    
+      .populate('patientId', 'bimehKind paymentType')
+      .sort({ localDay: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // آمار پیجینیشن
+    const totalRecords = stats[0]?.count || 0;
+    const totalPages = Math.ceil(totalRecords / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    const Amar = stats;
+    const pagination = {
+      currentPage: parseInt(page),
+      totalPages,
+      totalRecords,
+      hasNextPage,
+      hasPrevPage,
+      limit: parseInt(limit)
+    };
+
+    res.status(200).json({AppList, Amar, pagination});
+
   } catch (error) {
     console.error("Search error:", error);
     res.status(500).json({ 

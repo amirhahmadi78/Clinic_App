@@ -9,6 +9,8 @@ import {
   GetAllFinancial,
   GetPatientsList,
   GetFindLeaveRequests,
+  ApproveOrRejectLeaveRequest,
+  GetPendingLeaveRequestsCount,
   GetmonthTherapistIncome,
   GetPatientFinance,
   MakeTherapist,
@@ -33,6 +35,9 @@ import {
   destroytherapist,
   GEtMonthSalaryTherapist,
   GetAppDetails,
+  GetTodayPatients,
+  GetDayLeaveRequests,
+  migrateLeaveRequests,
 } from "../controllers/admin.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
 
@@ -66,6 +71,34 @@ router.get(
   requireAuth,
   csrfGuard,
   GetFindLeaveRequests
+);
+
+router.post(
+  "/admin/leaverequests/approve-reject",
+  requireAuth,
+  csrfGuard,
+  ApproveOrRejectLeaveRequest
+);
+
+router.get(
+  "/admin/leaverequests/pending-count",
+  requireAuth,
+  csrfGuard,
+  GetPendingLeaveRequestsCount
+);
+
+router.get(
+  "/admin/leaverequests/day-leaves",
+  requireAuth,
+  csrfGuard,
+  GetDayLeaveRequests
+);
+
+router.post(
+  "/admin/leaverequests/migrate",
+  requireAuth,
+  csrfGuard,
+  migrateLeaveRequests
 );
 
 router.get("/admin/GetAllfinancial", requireAuth, csrfGuard, GetAllFinancial);
@@ -167,5 +200,7 @@ router.delete(
 );
 
 router.get("/admin/appdetails",csrfGuard,requireAuth,GetAppDetails)
+
+router.get("/admin/daypatients",csrfGuard,requireAuth,GetTodayPatients)
 
 export default router;

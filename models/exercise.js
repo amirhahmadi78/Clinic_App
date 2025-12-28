@@ -1,15 +1,33 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-const Schema = mongoose.Schema;
-const ExerciseSchema = new mongoose.Schema({
-  title: { type: String, required: true },     
-  description: { type: String },   
-  category: { type: String, enum: ["SLP", "OT", "PT"], required: true },             
-  // type: { type: String, enum: ["video", "audio", "image", "text"], required: true },
-  fileUrl: { type: String },                    
-  createdBy: { type: Schema.Types.ObjectId, ref: "therapist" },
-  createdAt: { type: Date, default: Date.now }
-});
-
-const exercise = mongoose.model("exercise", ExerciseSchema);
-export default exercise;
+const exerciseSchema = new mongoose.Schema({
+  therapist: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'therapist',
+    required: true,
+  },
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  description: {
+    type: String,
+    trim: true,
+  },
+  fileUrl: {
+    type: String, // URL or path to the exercise file (e.g., video, PDF)
+    required: true,
+  },
+  fileType: {
+    type: String, // e.g., 'video', 'pdf', 'image'
+    enum: ['video', 'pdf', 'image', 'document', 'other'],
+    default: 'other',
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now,
+  },
+}, { timestamps: true });
+const Exercise = mongoose.models.Exercise || mongoose.model('Exercise', exerciseSchema);
+export default Exercise;

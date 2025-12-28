@@ -6,6 +6,7 @@ import therapist from "../models/therapist.js";
 
 import appointment from "../models/Appointment.js";
 import financial from "../models/financial.js";
+import InsuranceContract from "../models/InsuranceContract.js";
 
 
 import {
@@ -228,13 +229,36 @@ if(OneAppointment.status_clinic=="break"){
         status_clinic === "completed-paid" ||
         status_clinic === "bimeh")
     ){
+
+      // اگر وضعیت به بیمه تغییر کرد، فیلدهای بیمه را پر کن
+      if (status_clinic === "bimeh") {
+        const patientData = await patient.findById(OneAppointment.patientId);
+        if (patientData && patientData.paymentType === "bimeh" && patientData.bimehKind) {
+          const insuranceContract = await InsuranceContract.findOne({ name: patientData.bimehKind });
+          if (insuranceContract) {
+            OneAppointment.insuranceContract = insuranceContract._id;
+            OneAppointment.insuranceName = insuranceContract.name;
+            OneAppointment.insuranceShare = OneAppointment.patientFee * (insuranceContract.discountRate / 100);
+
+            // بروزرسانی بدهی بیمه - فقط سهم بیمه اضافه شود نه کل مبلغ
+            insuranceContract.totalDebtAmount += OneAppointment.insuranceShare;
+            insuranceContract.currentBalance = insuranceContract.totalPaidAmount - insuranceContract.totalDebtAmount;
+            await insuranceContract.save();
+          }
+        }else{
+          return next(new Error("این مراجع فاقد قرار داد بیمه می باشد!" ,{
+            statusCode:403
+          }))
+        }
+      }
+
        OneAppointment.paidAt=payAt
   OneAppointment.pay_details=pay_details
   OneAppointment.payment=payment
       const updateAppoint=await OneAppointment.save()
       res.status(201).json({
           message: "وضعیت پرداخت تغییر کرد",
-         
+
           updateAppoint
         });
       } 
@@ -274,7 +298,156 @@ export async function GetFindLeaveRequests(req, res, next) {
 
     const RequestsList = await GetRequests(query);
 
-    res.status(201).json(RequestsList);
+    // Get all leave requests first
+    const leaveRequests = await LeaveRequest.find(query).sort({ createdAt: -1 });
+
+    // Populate user data for each request based on userType
+    const populatedRequests = [];
+    for (const request of leaveRequests) {
+      const populatedRequest = await LeaveRequest.populate(request, {
+        path: 'user',
+        model: request.userType === 'therapist' ? 'therapist' : 'patient',
+        select: 'firstName lastName phone role skills'
+      });
+      populatedRequests.push(populatedRequest);
+    }
+
+    res.status(201).json({
+      message: RequestsList.message,
+      requests: populatedRequests
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function ApproveOrRejectLeaveRequest(req, res, next) {
+  try {
+    const { requestId, status, adminNotes } = req.body;
+
+    if (!requestId || !status) {
+      const error = new Error("شناسه درخواست و وضعیت الزامی هستند");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (!['approved', 'rejected'].includes(status)) {
+      const error = new Error("وضعیت باید approved یا rejected باشد");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    const leaveRequest = await LeaveRequest.findById(requestId).populate('therapist');
+
+    if (!leaveRequest) {
+      const error = new Error("درخواست مرخصی یافت نشد");
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    if (leaveRequest.status !== 'pending') {
+      const error = new Error("این درخواست قبلاً بررسی شده است");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    leaveRequest.status = status;
+    if (adminNotes) {
+      leaveRequest.adminNotes = adminNotes;
+    }
+
+    await leaveRequest.save();
+
+    res.status(200).json({
+      message: `درخواست مرخصی با موفقیت ${status === 'approved' ? 'تایید' : 'رد'} شد`,
+      leaveRequest
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function GetPendingLeaveRequestsCount(req, res, next) {
+  try {
+    const pendingCount = await LeaveRequest.countDocuments({ status: 'pending' });
+    res.status(200).json({ pendingCount });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function migrateLeaveRequests(req, res, next) {
+  try {
+    // Find all leave requests that have therapist field but no user field
+    const requestsToMigrate = await LeaveRequest.find({
+      therapist: { $exists: true },
+      user: { $exists: false }
+    });
+
+    let migratedCount = 0;
+    for (const request of requestsToMigrate) {
+      await LeaveRequest.findByIdAndUpdate(request._id, {
+        user: request.therapist,
+        userType: 'therapist'
+      });
+      migratedCount++;
+    }
+
+    res.status(200).json({
+      message: `تعداد ${migratedCount} درخواست مرخصی با موفقیت بروزرسانی شد`,
+      migratedCount
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function GetDayLeaveRequests(req, res, next) {
+  try {
+    const { date } = req.query;
+
+    if (!date) {
+      const error = new Error("تاریخ مورد نظر را وارد کنید");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // پیدا کردن تمام درخواست‌های مرخصی که در این تاریخ فعال هستند
+    const targetDate = new Date(date);
+
+    const dayLeaves = await LeaveRequest.find({
+      status: { $in: ['approved', 'pending'] }, // مرخصی‌های تایید شده و در حال بررسی
+      $or: [
+        // مرخصی‌های روزانه که تاریخ انتخابی بین شروع و پایان باشد
+        {
+          type: 'daily',
+          startDate: { $lte: targetDate },
+          endDate: { $gte: targetDate }
+        },
+        // مرخصی‌های ساعتی که تاریخ startDate برابر با تاریخ انتخابی باشد
+        {
+          type: 'hourly',
+          startDate: {
+            $gte: new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()),
+            $lt: new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1)
+          }
+        }
+      ]
+    })
+    .populate({
+      path: 'user',
+      select: 'firstName lastName phone role skills',
+      model: function() {
+        return this.userType === 'therapist' ? 'therapist' : 'patient';
+      }
+    })
+    .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "مرخصی‌های تاریخ مورد نظر",
+      date: date,
+      leaveRequests: dayLeaves
+    });
   } catch (error) {
     next(error);
   }
@@ -282,20 +455,29 @@ export async function GetFindLeaveRequests(req, res, next) {
 
 export async function GetAllFinancial(req, res, next) {
   try {
-    const { startDay, endDay, payment } = req.query;
-    if (!startDay || !endDay) {
-    const response = await FindAllFinancial({});
-    res.status(200).json(response);
-    }else{
-       let query = { localDay_visit: { $gte: startDay, $lte: endDay } };
-    if (payment) {
-      query.payment = { $in: payment };
-    }
-    const response = await FindAllFinancial(query);
-    res.status(200).json(response);
+    const { startDay, endDay, payment, page = 1, limit = 20 } = req.query;
+
+    let query = {};
+
+    // اعمال فیلترهای تاریخ
+    if (startDay || endDay) {
+      query.localDay = {};
+      if (startDay) query.localDay.$gte = startDay;
+      if (endDay) query.localDay.$lte = endDay;
     }
 
-   
+    // اعمال فیلترهای پرداخت
+    if (payment) {
+      if (Array.isArray(payment)) {
+        query.payment = { $in: payment };
+      } else {
+        query.payment = payment;
+      }
+    }
+
+    const response = await FindAllFinancial(query, parseInt(page), parseInt(limit));
+    res.status(200).json(response);
+
   } catch (error) {
     next(error);
   }
@@ -570,7 +752,7 @@ export async function ArchiveTherapist(req, res, next) {
 export async function MakePatient(req,res,next) {
   try {
     
-        const { firstName,lastName, phone, paymentType ,discountPercent,address,workDays,introducedBy} = req.body;
+        const { firstName,lastName, phone, paymentType ,discountPercent,address,workDays,introducedBy,bimehKind} = req.body;
     const username=phone
         const existUser = await patient.findOne({
           $or: [{ username }, {phone}],
@@ -602,12 +784,13 @@ export async function MakePatient(req,res,next) {
           firstName,
           lastName,
           paymentType,
+          bimehKind: paymentType === "bimeh" ? bimehKind : undefined,
           discountPercent,
           address,
           phone,
           workDays,
           wallet:0
-    
+
         });
 if (introducedBy) {
   newPatient.introducedBy = introducedBy;
@@ -630,7 +813,7 @@ export async function EditPatient(req,res,next) {
   try {
     console.log(req.body);
     
-       const { OldPatient,firstName,lastName, phone, paymentType ,discountPercent,address,introducedBy,workDays} = req.body;
+       const { OldPatient,firstName,lastName, phone, paymentType ,discountPercent,address,introducedBy,workDays,bimehKind} = req.body;
     const username=phone
 
       const IsTherapist=await patient.findById(OldPatient._id)
@@ -645,6 +828,7 @@ export async function EditPatient(req,res,next) {
           firstName,
           lastName,
           paymentType,
+          bimehKind: paymentType === "bimeh" ? bimehKind : undefined,
           workDays,
           discountPercent,
           phone,
@@ -988,23 +1172,91 @@ if(salaries.length>0){
 
 export async function GetUnprocessedAppointments(req, res, next) {
   try {
-    const appointments1 = await appointment.find({
-      $and: [
-        { status_clinic: { $in: ["canceled", "scheduled"] } },
-        { status_therapist: "completed" }
-      ]
+    const { page = 1, limit = 20 } = req.query;
+
+    // ایجاد aggregation pipeline برای گرفتن جلسات نامشخص با پیجینیشن
+    const pipeline = [
+      {
+        $facet: {
+          // جلسات گروه 1: درمانگر تمام کرده اما کلینیک لغو یا برنامه‌ریزی شده
+          group1: [
+            {
+              $match: {
+                $and: [
+                  { status_clinic: { $in: ["canceled", "scheduled"] } },
+                  { status_therapist: "completed" }
+                ]
+              }
+            },
+            {
+              $addFields: { conflictType: "therapist_completed_clinic_pending" }
+            }
+          ],
+          // جلسات گروه 2: کلینیک تمام کرده اما درمانگر غایب یا برنامه‌ریزی شده
+          group2: [
+            {
+              $match: {
+                $and: [
+                  { status_clinic: { $in: ["completed-notpaid", "completed-paid", "bimeh"] } },
+                  { status_therapist: { $in: ["absent", "scheduled"] } }
+                ]
+              }
+            },
+            {
+              $addFields: { conflictType: "clinic_completed_therapist_pending" }
+            }
+          ]
+        }
+      },
+      {
+        $project: {
+          allAppointments: {
+            $concatArrays: ["$group1", "$group2"]
+          }
+        }
+      },
+      {
+        $unwind: "$allAppointments"
+      },
+      {
+        $replaceRoot: { newRoot: "$allAppointments" }
+      },
+      {
+        $sort: { start: -1 }
+      },
+      {
+        $group: {
+          _id: null,
+          appointments: { $push: "$$ROOT" },
+          totalCount: { $sum: 1 }
+        }
+      }
+    ];
+
+    const result = await appointment.aggregate(pipeline);
+    const data = result[0] || { appointments: [], totalCount: 0 };
+
+    // اعمال پیجینیشن
+    const skip = (page - 1) * limit;
+    const paginatedAppointments = data.appointments.slice(skip, skip + limit);
+
+    // آمار پیجینیشن
+    const totalRecords = data.totalCount;
+    const totalPages = Math.ceil(totalRecords / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    res.status(200).json({
+      appointments: paginatedAppointments,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalRecords,
+        hasNextPage,
+        hasPrevPage,
+        limit: parseInt(limit)
+      }
     });
-
-    const appointments2 = await appointment.find({
-      $and: [
-        { status_clinic: { $in: ["completed-notpaid", "completed-paid", "bimeh"] } },
-        { status_therapist: { $in: ["absent", "scheduled"] } }
-      ]
-    });
-
-    const AllAppointments = [...appointments1, ...appointments2];
-
-    res.status(200).json(AllAppointments);
 
   } catch (error) {
     next(error);
@@ -1198,4 +1450,25 @@ try {
   next(error)
 }
 
+}
+
+
+
+export async function GetTodayPatients(req,res,next){
+ 
+  try {
+    const {day}=req.query
+   
+    
+
+   
+    const patientList=await patient.find({'workDays.day':day})
+    res.status(200).json({
+      patientList
+    })
+    
+  } catch (error) {
+    error.message="خطا در دریافت مراجعین این تاریخ"
+    next(error)
+  }
 }
