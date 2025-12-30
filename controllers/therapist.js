@@ -148,6 +148,8 @@ export async function createLeaveRequest(req, res, next) {
     }
 
     const newLeaveRequest = new LeaveRequest({
+      user: therapistId,
+      userType: 'therapist',
       therapist: therapistId,
       type,
       startDate,

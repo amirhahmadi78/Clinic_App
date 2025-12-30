@@ -406,17 +406,21 @@ export async function GetDayLeaveRequests(req, res, next) {
   try {
     const { date } = req.query;
 
+
     if (!date) {
       const error = new Error("تاریخ مورد نظر را وارد کنید");
       error.statusCode = 400;
       return next(error);
     }
 
-    // پیدا کردن تمام درخواست‌های مرخصی که در این تاریخ فعال هستند
-    const targetDate = new Date(date);
+const targetDate=new Date(date)
+
+const gi=await LeaveRequest.find()
+console.log(gi[0]?.startDate)
+console.log(targetDate);
 
     const dayLeaves = await LeaveRequest.find({
-      status: { $in: ['approved', 'pending'] }, // مرخصی‌های تایید شده و در حال بررسی
+      status: { $in: ['approved', 'pending','rejected'] }, // مرخصی‌های تایید شده و در حال بررسی
       $or: [
         // مرخصی‌های روزانه که تاریخ انتخابی بین شروع و پایان باشد
         {
@@ -437,9 +441,7 @@ export async function GetDayLeaveRequests(req, res, next) {
     .populate({
       path: 'user',
       select: 'firstName lastName phone role skills',
-      model: function() {
-        return this.userType === 'therapist' ? 'therapist' : 'patient';
-      }
+      // اینجا model مشخص نمی‌کنیم، چون refPath خودش مدیریت می‌کند
     })
     .sort({ createdAt: -1 });
 
