@@ -68,41 +68,68 @@ export async function dailyFinancialOfTherapist(therapistId, localDay) {
     let reports = [];
     let therapistIncome = 0;
     let clinicIncome = 0;
-    const appointments = await Appointment.find({ therapistId, localDay });
+    
+    const appointments = await Appointment.find({
+      $or: [
+        { therapistId },
+        { "groupSession.therapists.therapistId": therapistId }
+      ],
+      localDay
+    }).populate("groupSession.patients", "firstName lastName");
+
     if (appointments.length === 0) {
-      const error = new Error("درمانگر در روز مورد نظر ویزیت  ندارد");
+      const error = new Error("درمانگر در روز مورد نظر ویزیت ندارد");
       error.statusCode = 404;
       throw error;
     }
-    for (const OneAppoint of appointments) {
+
+    for (const app of appointments) {
+      // برای سازگاری با کدهای قدیمی، اگر فیننشیال وجود داشت از آن استفاده می‌کنیم
+      // در غیر این صورت از خود نوبت استفاده می‌کنیم
       const Onereport = await financial
-        .findOne({ appointmentId: OneAppoint._id })
+        .findOne({ appointmentId: app._id })
         .populate([
           { path: "patientId", select: "firstName lastName" },
           {
             path: "appointmentId",
-            select: "duration status_clinic status_therapist",
+            select: "duration status_clinic status_therapist sessionType groupSession",
           },
-        ])
-        .select({
-          appointmentId: 1,
-          patientFee: 1,
-          therapistShare: 1,
-          clinicShare: 1,
-        });
+        ]);
+
       if (Onereport) {
         therapistIncome += Onereport.therapistShare;
         clinicIncome += Onereport.clinicShare;
         reports.push(Onereport);
+      } else if (app.status_clinic === "completed-notpaid" || app.status_clinic === "completed-paid" || app.status_clinic === "bimeh") {
+        // اگر رکورد فیننشیال نبود ولی نوبت تکمیل شده بود
+        if (app.sessionType === "group") {
+          const therapistInfo = app.groupSession.therapists.find(
+            t => t.therapistId.toString() === therapistId.toString()
+          );
+          if (therapistInfo) {
+            const share = therapistInfo.therapistShare || 0;
+            therapistIncome += share;
+            reports.push({
+              appointmentId: app,
+              patientFee: app.patientFee,
+              therapistShare: share,
+              clinicShare: app.clinicShare / app.groupSession.therapists.length, // تخمینی
+              isGroup: true
+            });
+          }
+        } else {
+          therapistIncome += app.therapistShare || 0;
+          clinicIncome += app.clinicShare || 0;
+          reports.push({
+            appointmentId: app,
+            patientFee: app.patientFee,
+            therapistShare: app.therapistShare,
+            clinicShare: app.clinicShare
+          });
+        }
       }
     }
-    if (reports.length === 0) {
-      const error = new Error(
-        "درمانگر در روز مورد نظر ویزیت ثبت شده نداشته است"
-      );
-      error.statusCode = 404;
-      throw error;
-    }
+
     return {
       message: "تراکنش های مالی درمانگر در روز مورد نظر به شرح زیر است",
       reports,
@@ -128,16 +155,19 @@ export async function monthFinancialOfTherapist(therapistId, startDay, endDay) {
     let therapistIncome = 0;
     let clinicIncome = 0;
     const appointments = await Appointment.find({
-      therapistId,
+      $or: [
+        { therapistId },
+        { "groupSession.therapists.therapistId": therapistId }
+      ],
       localDay: {
         $gte: startDay,
         $lte: endDay,
-        
       },
-      status_clinic :{
-    $in: ["completed-notpaid", "completed-paid", "bimeh"],
-  }
-    });
+      status_clinic: {
+        $in: ["completed-notpaid", "completed-paid", "bimeh"],
+      }
+    }).populate("groupSession.patients", "firstName lastName");
+
     if (appointments.length === 0) {
       return {
         message: "فاقد جلسه ی درمانی در بازه ی مورد نظر می باشد",
@@ -148,21 +178,33 @@ export async function monthFinancialOfTherapist(therapistId, startDay, endDay) {
       };
     }
 
-   
-      for (const Onereport of appointments) {
-        therapistIncome += Onereport.therapistShare;
-        clinicIncome += Onereport.clinicShare;
-        TotalFinancial += Onereport.patientFee;
+    for (const app of appointments) {
+      if (app.sessionType === "group") {
+        const therapistInfo = app.groupSession.therapists.find(
+          t => t.therapistId.toString() === therapistId.toString()
+        );
+        if (therapistInfo) {
+          therapistIncome += therapistInfo.therapistShare || 0;
+          // Calculate clinic share for this therapist's portion if needed, 
+          // but usually clinicIncome here is total clinic income from these appointments
+          clinicIncome += (app.patientFee / app.groupSession.therapists.length) - (therapistInfo.therapistShare || 0); // Simplified
+          TotalFinancial += app.patientFee / app.groupSession.therapists.length; // Simplified
+        }
+      } else {
+        therapistIncome += app.therapistShare || 0;
+        clinicIncome += app.clinicShare || 0;
+        TotalFinancial += app.patientFee || 0;
       }
+    }
 
-      return {
-        message: "تراکنش های مالی درمانگر در بازه مورد نظر به شرح زیر است",
-        therapistIncome,
-        clinicIncome,
-        TotalFinancial,
-        reports:appointments,
-      };
-    
+    return {
+      message: "تراکنش های مالی درمانگر در بازه مورد نظر به شرح زیر است",
+      therapistIncome,
+      clinicIncome,
+      TotalFinancial,
+      reports: appointments,
+    };
+
   } catch (error) {
     throw error;
   }

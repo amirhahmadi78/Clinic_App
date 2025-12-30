@@ -140,9 +140,9 @@ export async function GetNotebook(req,res,next) {
             patientId,
             therapistId,
             isActive:true
-        })
+        }).populate('exercises.exerciseId')
         if(ActiveNoteBook.length>0){
-            res.status(200).json(ActiveNoteBook[-1])
+            res.status(200).json(ActiveNoteBook[ActiveNoteBook.length - 1])
         }
         else{
             res.status(200).json({

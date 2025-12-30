@@ -1,5 +1,5 @@
 
-import { createNoteBook,updateNoteBook,addExerciseToNoteBook,removeExerciseFromNoteBook,deleteNoteBook,getNoteBookofPatientBytherapistId, getActiveNotebook, createNewNotebook, updateNotebookTitle, updateNotebookNote, updateExerciseNote} from "../services/noteBookService.js";
+import { createNoteBook,updateNoteBook,addExerciseToNoteBook,removeExerciseFromNoteBook,deleteNoteBook,getNoteBookofPatientBytherapistId, getActiveNotebook, createNewNotebook, updateNotebookTitle, updateNotebookNote} from "../services/noteBookService.js";
 
 export const createNoteBookController = async (req, res,next) => {
     try {
@@ -163,21 +163,6 @@ export const updateNotebookNoteController = async (req, res, next) => {
             return next(error);
         }
         const result = await updateNotebookNote(notebookId, note || "");
-        res.status(200).json(result);
-    } catch (error) {
-        next(error);
-    }
-};
-
-export const updateExerciseNoteController = async (req, res, next) => {
-    try {
-        const { notebookId, exerciseId, note } = req.body;
-        if (!notebookId || !exerciseId) {
-            const error = new Error("فیلدهای مورد نیاز را وارد کنید");
-            error.statusCode = 400;
-            return next(error);
-        }
-        const result = await updateExerciseNote(notebookId, exerciseId, note || "");
         res.status(200).json(result);
     } catch (error) {
         next(error);

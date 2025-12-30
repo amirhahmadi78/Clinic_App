@@ -34,6 +34,8 @@ import {
   destroyPatient,
   destroytherapist,
   GEtMonthSalaryTherapist,
+  GetTherapistBalance,
+  PostChangegroupStatus,
   GetAppDetails,
   GetTodayPatients,
   GetDayLeaveRequests,
@@ -166,6 +168,20 @@ router.get(
   csrfGuard,
   requireAuth,
   GEtMonthSalaryTherapist
+);
+
+router.get(
+  "/admin/therapist-balance",
+  csrfGuard,
+  requireAuth,
+  GetTherapistBalance
+);
+
+router.post(
+  "/admin/changegroupstatus",
+  csrfGuard,
+  requireAuth,
+  PostChangegroupStatus
 );
 
 router.get(

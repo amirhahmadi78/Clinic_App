@@ -1,5 +1,5 @@
 import express from "express";
-import { ShowPatients, createLeaveRequest, getTherapistLeaveRequests, deleteLeaveRequest, therapistChangeStatusAndMakefinance, GetdailyTherapistIncome, GetmonthTherapistIncome, writeReport, uploadExercise, getTherapistExercises, updateExercise, deleteExercise, getPatientStats } from "../controllers/therapist.js";
+import { ShowPatients, createLeaveRequest, getTherapistLeaveRequests, deleteLeaveRequest, therapistChangeStatusAndMakefinance, GetdailyTherapistIncome, GetmonthTherapistIncome, writeReport, uploadExercise, getTherapistExercises, updateExercise, deleteExercise } from "../controllers/therapist.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
 import { getExercises } from "../controllers/exercise.js";
 
@@ -26,8 +26,5 @@ router.post("/therapist/exercises", csrfGuard, requireAuth, uploadExercise);
 router.get("/therapist/exercises", csrfGuard, requireAuth, getTherapistExercises);
 router.put("/therapist/exercises/:exerciseId", csrfGuard, requireAuth, updateExercise);
 router.delete("/therapist/exercises/:exerciseId", csrfGuard, requireAuth, deleteExercise);
-
-// Patient Stats Route
-router.get("/therapist/patient-stats/:patientId", csrfGuard, requireAuth, getPatientStats);
 
 export default router;

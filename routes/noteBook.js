@@ -11,8 +11,7 @@ import express from 'express';
     getActiveNotebookController,
     createNewNotebookController,
     updateNotebookTitleController,
-    updateNotebookNoteController,
-    updateExerciseNoteController
+    updateNotebookNoteController
 } from "../controllers/neteBook.js"
 import { csrfGuard, requireAuth } from '../middlewares/auth.js';
 
@@ -35,7 +34,5 @@ router.post('/exercise/createnewnotebook',requireAuth,csrfGuard, createNewNotebo
 router.put('/exercise/updatenotebooktitle',requireAuth,csrfGuard, updateNotebookTitleController);
 
 router.put('/exercise/updatenotebooknote',requireAuth,csrfGuard, updateNotebookNoteController);
-
-router.put('/exercise/updateexercisenote',requireAuth,csrfGuard, updateExerciseNoteController);
 
 export default router;

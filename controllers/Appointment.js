@@ -273,9 +273,14 @@ export async function DailyScheduleOfTherapist(req, res, next) {
 
 
     const appointments = await Appointment.find({
-      therapistId: req.user.id,
+      $or: [
+        { therapistId: req.user.id },
+        { "groupSession.therapists.therapistId": req.user.id }
+      ],
       localDay,
-    });
+    })
+      .populate("groupSession.patients", "firstName lastName")
+      .sort({ start: 1 });
     // if (appointments.length == 0) {
     //   const error = new Error("برنامه ی درمانگر در این تاریخ خالی می باشد");
     //   error.statusCode = 201;

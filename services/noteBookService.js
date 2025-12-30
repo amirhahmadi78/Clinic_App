@@ -102,20 +102,14 @@ export const getActiveNotebooksOfPatientTherapists = async (patientId) => {
     try {
         // ابتدا درمانگران بیمار را پیدا کنیم
         const patientData = await patient.findById(patientId).select('therapists');
-   
-        
         if (!patientData || !patientData.therapists || patientData.therapists.length === 0) {
-                   
             return [];
-  
-            
         }
 
         // سپس نوت‌بوک‌های فعال هر درمانگر را پیدا کنیم
-            const therapistIds = patientData.therapists.map(t => 
+        const therapistIds = patientData.therapists.map(t => 
             typeof t === 'object' ? t._id : t
         );
-        console.log(patientId);
         
         const notebooks = await noteBook.find({
             patientId,
@@ -175,18 +169,6 @@ export const updateNotebookNote = async (notebookId, note) => {
         ).populate('exercises.exerciseId');
     } catch (error) {
         throw new Error("خطا در بروزرسانی یادداشت نوت‌بوک");
-    }
-};
-
-export const updateExerciseNote = async (notebookId, exerciseId, note) => {
-    try {
-        return await noteBook.findOneAndUpdate(
-            { _id: notebookId, 'exercises.exerciseId': exerciseId },
-            { $set: { 'exercises.$.note': note } },
-            { new: true }
-        ).populate('exercises.exerciseId');
-    } catch (error) {
-        throw new Error("خطا در بروزرسانی یادداشت تمرین");
     }
 };
 

@@ -165,7 +165,7 @@ export async function DailyScheduleOfTherapist(req, res, next) {
     const appointments = await appointment.find({
       therapistId,
       localDay,
-    });
+    }).sort({ start: 1 });
     if (appointments.length == 0) {
       const error = new Error("برنامه ی درمانگر در این تاریخ خالی می باشد");
       error.statusCode = 404;
@@ -1167,6 +1167,40 @@ if(salaries.length>0){
     next(error)
   }
   
+}
+
+
+export async function GetTherapistBalance(req, res, next) {
+  // ... existing code ...
+}
+
+
+export async function PostChangegroupStatus(req, res, next) {
+  try {
+    const { appointmentId, status_clinic } = req.body;
+    if (!appointmentId || !status_clinic) {
+      return next(new Error("مقادیر وارد شده ناقص است", { statusCode: 400 }));
+    }
+
+    const OneApp = await appointment.findById(appointmentId);
+    if (!OneApp) {
+      return next(new Error("کلاس یافت نشد", { statusCode: 404 }));
+    }
+
+    OneApp.status_clinic = status_clinic;
+    
+    // اگر وضعیت به "scheduled" یا "canceled" تغییر کرد، پرداخت‌های قبلی را حذف می‌کنیم؟
+    // فعلا طبق درخواست کاربر فقط وضعیت را تغییر می‌دهیم.
+    
+    const result = await OneApp.save();
+    res.status(200).json({
+      success: true,
+      message: "وضعیت کلاس با موفقیت تغییر کرد",
+      result
+    });
+  } catch (error) {
+    next(error);
+  }
 }
 
 
