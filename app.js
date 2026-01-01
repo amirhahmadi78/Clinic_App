@@ -21,7 +21,7 @@ import DefAppointmentRoute from "./routes/DefAppointments.js"
 import priceCache from './utils/priceCache.js';
 const app = express();
 const PORT = process.env.PORT || 8642;
-const DB_URI = "mongodb://localhost:27017/clinic_app";
+const DB_URI = "mongodb://localhost:27017/clinic_app2";
 
 console.log("ghablesh");
 
