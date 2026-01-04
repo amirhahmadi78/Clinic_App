@@ -83,3 +83,50 @@ export async function GetRequests(query){
         throw error
     }
 }
+
+
+
+export async function TodayLeaves(date){
+    try {
+       
+        const targetDate=new Date(date)
+        
+        const gi=await LeaveRequest.find()
+     
+       
+        
+            const dayLeaves = await LeaveRequest.find({
+              status: { $in: ['approved'] }, // مرخصی‌های تایید شده و در حال بررسی
+              $or: [
+                // مرخصی‌های روزانه که تاریخ انتخابی بین شروع و پایان باشد
+                {
+                  type: 'daily',
+                  startDate: { $lte: targetDate },
+                  endDate: { $gte: targetDate }
+                },
+                // مرخصی‌های ساعتی که تاریخ startDate برابر با تاریخ انتخابی باشد
+                {
+                  type: 'hourly',
+                  startDate: {
+                    $gte: new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()),
+                    $lt: new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1)
+                  }
+                }
+              ]
+            })
+            .populate({
+              path: 'user',
+              select: 'firstName lastName',
+              // اینجا model مشخص نمی‌کنیم، چون refPath خودش مدیریت می‌کند
+            })
+            .sort({ createdAt: -1 });
+        
+            return{
+              message: "مرخصی‌های تاریخ مورد نظر",
+              date: date,
+              leaveRequests: dayLeaves
+            }
+    } catch (error) {
+        throw error
+    }
+}

@@ -15,7 +15,7 @@ import {
   FindPatientFinance,
   monthFinancialOfTherapist,
 } from "../services/financialservice.js";
-import { GetRequests } from "../services/leaveRequestService.js";
+import { GetRequests, TodayLeaves } from "../services/leaveRequestService.js";
 import { FindTherapist } from "../services/therapistService.js";
 import { GetPatients ,PatientDetails} from "../services/patientServise.js";
 import LeaveRequest from "../models/LeaveRequest.js";
@@ -271,6 +271,8 @@ if(OneAppointment.status_clinic=="break"){
 
 export async function GetFindLeaveRequests(req, res, next) {
   try {
+
+
     const { user, userType, startDay, endDay, status, localDay, daySearch } =
       req.query;
 
@@ -405,7 +407,7 @@ export async function migrateLeaveRequests(req, res, next) {
 export async function GetDayLeaveRequests(req, res, next) {
   try {
     const { date } = req.query;
-
+ 
 
     if (!date) {
       const error = new Error("تاریخ مورد نظر را وارد کنید");
@@ -416,8 +418,7 @@ export async function GetDayLeaveRequests(req, res, next) {
 const targetDate=new Date(date)
 
 const gi=await LeaveRequest.find()
-console.log(gi[0]?.startDate)
-console.log(targetDate);
+
 
     const dayLeaves = await LeaveRequest.find({
       status: { $in: ['approved', 'pending','rejected'] }, // مرخصی‌های تایید شده و در حال بررسی
@@ -1505,6 +1506,20 @@ export async function GetTodayPatients(req,res,next){
     
   } catch (error) {
     error.message="خطا در دریافت مراجعین این تاریخ"
+    next(error)
+  }
+}
+
+
+export async function GetTodayApprovedLeaves(req,res,next){
+  try {
+    const{date}=req.query
+    if(!date){
+      return next(new Error("تاریخ بررسی مرخصی تعیین نشده است!"))
+    }
+   const response= await TodayLeaves(date)
+   res.status(200).json(response)
+  } catch (error) {
     next(error)
   }
 }

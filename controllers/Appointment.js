@@ -11,6 +11,8 @@ import priceCache from "../utils/priceCache.js";
 import ServicePrice from "../models/ServicePrice.js";
 import message from "../models/message.js";
 import { log } from "console";
+import { checkTherapistLeave } from "../utils/LeaveCheaker.js";
+import { TodayLeaves } from "../services/leaveRequestService.js";
 
 
 export async function AddAppointment(req, res, next) {
@@ -500,11 +502,11 @@ const result = await Appointment.findByIdAndUpdate(appointmentId, {
 
 export async function PublishDailyFromDefPlan(req, res, next) {
   try {
-    
+    let AddToday=[]
     const AllDef = req.body.payload;
     const trueDate = req.body.trueDate;
     const Day = moment(trueDate).format("YYYY-MM-DD");
-
+    const leaves= await TodayLeaves(trueDate)
     for (const item of AllDef) {
       const appointmentData = { ...item };
 
@@ -584,7 +586,13 @@ export async function PublishDailyFromDefPlan(req, res, next) {
       delete appointmentData.patientFee;
       delete appointmentData.therapistShare;
       delete appointmentData.clinicShare
-      const result = new Appointment({
+     
+     
+     
+     const CheckLeave= checkTherapistLeave(appointmentData.therapistId,appointmentData,leaves.leaveRequests)
+     console.log("chekleave",CheckLeave);
+     if (CheckLeave.hasLeave==false){
+      const TrueApp={
         ...appointmentData,
         patientFee:patientFee,
         therapistShare:therapistShare,
@@ -593,11 +601,17 @@ export async function PublishDailyFromDefPlan(req, res, next) {
         localDay: Day,
         end: endDt.toJSDate(),
         date: Day, // اگر فیلد date نیاز باشد
-      });
+      }
 
-      await result.save();
+      AddToday.push(TrueApp)
+     }
+      
     }
-
+    if(AddToday.length!=0){
+      await Appointment.insertMany(AddToday,{
+        ordered:false
+      })
+    }
     res.status(200).json({
       message: "برنامه با موفقیت منتشر شد",
       count: AllDef.length,

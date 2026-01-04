@@ -40,6 +40,7 @@ import {
   GetTodayPatients,
   GetDayLeaveRequests,
   migrateLeaveRequests,
+  GetTodayApprovedLeaves,
 } from "../controllers/admin.js";
 import { csrfGuard, requireAuth } from "../middlewares/auth.js";
 
@@ -218,5 +219,9 @@ router.delete(
 router.get("/admin/appdetails",csrfGuard,requireAuth,GetAppDetails)
 
 router.get("/admin/daypatients",csrfGuard,requireAuth,GetTodayPatients)
+
+router.get("/admin/approved",csrfGuard,requireAuth,GetTodayApprovedLeaves)
+
+
 
 export default router;
